@@ -1,7 +1,7 @@
 <template>
 <div id="hall-view">
     <div id="hall-view-left">
-        <div id="hall-view-left-body">
+        <div v-show="!show_offline_game" id="hall-view-left-body">
             <div id="hall-view-left-top">
                 <el-input v-model="nickname" class="input-with-select" :disabled=nickname_editable>
                     <el-button slot="append" v-if="nickname_editable" @click="handleEdit()" icon="el-icon-edit"></el-button>
@@ -16,6 +16,36 @@
                 </el-table-column>
             </el-table>
         </div>
+        <div v-show="show_offline_game" id="hall-view-left-body">
+            <el-table :data="game_data.player_infos" id="player-list" :row-class-name="tableRowClassName">
+                <el-table-column label="玩家昵称" :span="1">
+                    <template slot-scope="scope">
+                        <span>
+                            <div v-if="scope.row.idx == 0" style="color: rgb(255,0,0)">▊ {{ scope.row.name }}</div>
+                            <div v-else-if="scope.row.idx == 1" style="color: rgb(0,176,80)" >▊ {{ scope.row.name }}</div>
+                            <div v-else-if="scope.row.idx == 2" style="color: rgb(0,176,240)" >▊ {{ scope.row.name }}</div>
+                            <div v-else style="color: rgb(255,192,0)" >▊ {{ scope.row.name }}</div>
+                        </span>
+                    </template>
+                </el-table-column>
+                <el-table-column label="剩余方块" :span="1">
+                    <template slot-scope="scope">
+                        <span>{{ scope.row.remains }} blocks</span>
+                    </template>
+                </el-table-column>
+                <el-table-column label="状态" :span="1">
+                    <template slot-scope="scope">
+                        <span>
+                            <el-tag v-if="scope.row.status == 'inited'" >{{ scope.row.status }}</el-tag>
+                            <el-tag v-else-if="scope.row.status == 'normal'" type="success">{{ scope.row.status }}</el-tag>
+                            <el-tag v-else type="info" >{{ scope.row.status }}</el-tag>
+                        </span>
+                    </template>
+                </el-table-column>
+            </el-table>
+            <el-button id="give-up" @click="handleGiveup()" icon="el-icon-close" type="danger" round>认输</el-button>
+            <el-button id="give-up" @click="handleQuitOfflineGame()" icon="el-icon-upload2" type="success" round>离开</el-button>
+        </div>
     </div>
     <div id="hall-view-right" ref="canvasWrapper">
         <div v-show="!show_offline_game" id="offline-game-tip">
@@ -23,6 +53,7 @@
             <el-button type="primary" round size="small" @click="handleStartOfflineGame">开始游戏</el-button>
         </div>
         <canvas v-show="show_offline_game" id="offline-game-canvas" width="800" height="600" ref="myCanvas"></canvas>
+        <canvas v-show="show_offline_game" id="offline-game-canvas-float" width="800" height="600" ref=myCanvasFloat></canvas>
     </div>
 </div>
 </template>
@@ -39,9 +70,13 @@ export default {
             nickname_editable: true,
             show_offline_game: false,
             canvas_config: {
+                canvas: null,
                 context: null,
+                canvas_float: null,
+                context_float: null,
                 width: 800,
                 height: 600,
+                actual_width: 600,
                 start_x: 0,
                 start_y: 0,
                 block_width: 20,
@@ -50,54 +85,14 @@ export default {
                 map: null,
                 map_row: 32,
                 map_col: 32,
-                map_region: {
-                    x: 6,
-                    y: 6,
-                    width: 20,
-                    height: 20,
-                    empty: {}
-                },
-                player_infos: []
-                // player_regions: [{
-                //     x: 7,
-                //     y: 27,
-                //     width: 18,
-                //     height: 5,
-                //     empty: [{
-                //         x: 24,
-                //         y: 27
-                //     }]
-                // },
-                // {
-                //     x: 27,
-                //     y: 7,
-                //     width: 5,
-                //     height: 18,
-                //     empty: [{
-                //         x: 27,
-                //         y: 7
-                //     }]
-                // },
-                // {
-                //     x: 7,
-                //     y: 0,
-                //     width: 18,
-                //     height: 5,
-                //     empty: [{
-                //         x: 7,
-                //         y: 4
-                //     }]
-                // },
-                // {
-                //     x: 0,
-                //     y: 7,
-                //     width: 5,
-                //     height: 18,
-                //     empty: [{
-                //         x: 4,
-                //         y: 24
-                //     }]
-                // }]
+                chesses: null,
+                player_infos: [],
+                game_status: 0,
+                current_status: 0, // 0 表示没有选中棋子 1 表示已经选中棋子但还没有放置 2 表示已经放置棋子到棋盘上但是还没有点击确定 3 表示游戏结束
+                current_blocks_chess_type: 0,
+                current_blocks_prev_pos: [],
+                current_chess: null,
+                current_player: 3
             },
             player_list_test: [{
                 name: "PLAYER_XXXX"
@@ -123,9 +118,24 @@ export default {
         }
     },
     mounted() {
-        // nothing
+        //
     },
     methods: {
+        tableRowClassName({row, rowIndex}) {
+            if (row.idx === this.game_data.current_player) {
+                return 'success-row';
+            } else {
+                return '';
+            }
+        },
+        handleGiveup() {
+            if (this.game_data.player_infos[this.game_data.current_player].status == "finished") return;
+            this.game_data.player_infos[this.game_data.current_player].status = "failed";
+            this.gameLoop();
+        },
+        handleQuitOfflineGame() {
+            this.show_offline_game = false;
+        },
         handleEdit() {
             this.nickname_editable = false
         },
@@ -133,7 +143,6 @@ export default {
             this.nickname_editable = true
         },
         handleStartOfflineGame() {
-            ele.Notification.success("进入离线单人游戏")
             this.show_offline_game = true
 
             // 初始化游戏数据
@@ -141,65 +150,182 @@ export default {
 
             // 调用Canvas初始化游戏场景
             this.initCanvas()
+
+            // 开始进入游戏循环
+            this.gameLoop()
+        },
+        handleMouseMove(event) {
+            if (this.game_data.game_status == 1) {
+                return;
+            }
+
+            let current_pos = this.getCurrentBlock(event);
+            let row = current_pos[0];
+            let col = current_pos[1];
+            
+            if (this.game_data.current_status == 1) {
+                can.canvasDrawFloatMap(this.canvas_config, row, col, this.game_data.current_chess, this.game_data.current_player);
+            }
+        },
+        handleMouseDown(event) {
+            if (this.game_data.game_status == 1) {
+                return;
+            }
+
+            // 鼠标按下事件对应处理函数，分为左击和右击两种情况处理
+            event = event || window.event;
+            let current_pos = this.getCurrentBlock(event);
+            let row = current_pos[0];
+            let col = current_pos[1];
+            let chess_type = this.game_data.map["map"][row][col].chess_type;
+
+            // 如果是鼠标左击
+            if (event.button == 0) {
+                // 无效区域
+                if (row < 0 || col < 0 || row >= 32 || col >= 32) return;
+                // 棋盘区域
+                // 如果当前位置可以放置棋子，而且当前的current_status为1，检查是否能够在当前位置放置棋子
+                // 这里的判断逻辑比较复复杂，详细的规则可以看ggl.checkLegalPosition函数实现
+                if (this.game_data.current_status == 1 && ggl.checkLegalPosition(this.game_data, row, col)) {
+                    ggl.putChess(this.game_data, row, col);
+                    this.game_data.player_infos[this.game_data.current_player].remains -= this.game_data.current_chess.blocks;
+                    // 如果某个玩家已经用完所有的棋子，将其状态更改为finished
+                    if (this.game_data.player_infos[this.game_data.current_player].remains == 0) {
+                        this.game_data.player_infos[this.game_data.current_player].status = "finished";
+                        ele.Notification.success("玩家 " + this.game_data.player_infos[this.game_data.current_player].name + "已经完成游戏!");
+                    }
+                    this.game_data.current_status = 0;
+                    this.game_data.current_chess = null;
+                    this.gameLoop();
+                }
+                // 当前玩家有效区域
+                else if (ggl.checkCurrentPlayerRegion(this.game_data, row, col)) {
+                    // 如果当前已经选中了一个棋子，需要将原本选中的棋子放回去
+                    if (this.game_data.current_status == 1) {
+                        ggl.putBackChess(this.game_data.map["map"], this.game_data.current_blocks_prev_pos, this.game_data.current_blocks_chess_type);
+                    }
+                    this.game_data.current_status = 1;
+                    this.game_data.current_blocks_chess_type = this.game_data.map["map"][row][col].chess_type;
+                    this.game_data.current_chess = this.game_data.chesses[this.game_data.current_blocks_chess_type];
+                    this.game_data.current_blocks_prev_pos = ggl.BFSSearch(this.game_data.map["map"], row, col);
+                }
+
+                can.canvasDrawMap(this.canvas_config, this.game_data.map["map"]);
+            }
+            // 如果是鼠标右击
+            else if (event.button == 2) {
+                if (this.game_data.current_status == 1) {
+                    ggl.overturnChess(this.game_data.current_chess);
+                    can.canvasDrawFloatMap(this.canvas_config, row, col, this.game_data.current_chess, this.game_data.current_player);
+                }
+            }
+        },
+        handleMouseWheel(event) {
+            if (this.game_data.game_status == 1) {
+                return;
+            }
+            // 滚动鼠标滑轮可以旋转当前选中的棋子
+            let current_pos = this.getCurrentBlock(event);
+            let row = current_pos[0];
+            let col = current_pos[1];
+            if (this.game_data.current_status == 1) {
+                ggl.rotateChess(this.game_data.current_chess);
+                can.canvasDrawFloatMap(this.canvas_config, row, col, this.game_data.current_chess, this.game_data.current_player);
+            }
+        },
+        gameLoop() {
+            if (this.game_data.game_status == 1) {
+                ele.Notification.info("游戏结束");
+            }
+            this.game_data.current_player = (this.game_data.current_player + 1) % 4;
+            let cnt = 0;
+            while (this.game_data.player_infos[this.game_data.current_player].status == "failed") {
+                this.game_data.current_player = (this.game_data.current_player + 1) % 4;
+                cnt += 1;
+                if (cnt == 4) break;
+            }
+            if (cnt == 4) {
+                this.game_data.game_status = 1;
+                ele.Notification.info("游戏结束");
+            }
+            else {
+                ele.Notification.success("现在轮到 " + this.game_data.player_infos[this.game_data.current_player].name + " 操作");
+            }
+        },
+        getCurrentBlock(event) {
+            const canvas = this.$refs.myCanvas;
+            let cRect = canvas.getBoundingClientRect();
+            let current_x = event.clientX - cRect.left - this.canvas_config.start_x;
+            let current_y = event.clientY - cRect.top - this.canvas_config.start_y
+            let current_row = Math.floor(current_y / this.canvas_config.block_width);
+            let current_col = Math.floor(current_x / this.canvas_config.block_width);
+            return [current_row, current_col];
         },
         initCanvas() {
             // 初始化Canvas绘图相关基本参数以及配置
             const canvas = this.$refs.myCanvas;
+            const canvas_float = this.$refs.myCanvasFloat;
             this.canvas_config.width = this.$refs.canvasWrapper.offsetWidth;
             this.canvas_config.height = this.$refs.canvasWrapper.offsetHeight;
             canvas.width = this.canvas_config.width;
             canvas.height = this.canvas_config.height
+            canvas_float.width = this.canvas_config.width;
+            canvas_float.height = this.canvas_config.height;
             this.canvas_config.context = canvas.getContext('2d');
+            this.canvas_config.context_float = canvas_float.getContext('2d');
 
             if (this.canvas_config.width >= this.canvas_config.height) {
                 let gap = (this.canvas_config.width - this.canvas_config.height) / 2;
                 this.canvas_config.start_x = gap;
                 this.canvas_config.start_y = 0;
+                this.canvas_config.actual_width = this.canvas_config.height;
                 this.canvas_config.block_width = this.canvas_config.height / this.game_data.map_row;
             } else {
                 let gap = (this.canvas_config.height - this.canvas_config.width) / 2;
                 this.canvas_config.start_x = 0;
                 this.canvas_config.start_y = gap;
+                this.canvas_config.actual_width = this.canvas_config.width;
                 this.canvas_config.block_width = this.canvas_config.width / this.game_data.map_row;
             }
 
             // Canvas绘图区域划分
-            can.canvasDrawMap(this.canvas_config.context, this.game_data.map, this.canvas_config);
+            can.canvasDrawMap(this.canvas_config, this.game_data.map["map"]);
+
+            // 添加canvas_float上的鼠标操作监控
+            canvas_float.addEventListener('mousemove', this.handleMouseMove);
+            canvas_float.addEventListener('mousedown', this.handleMouseDown);
+            canvas_float.addEventListener('mousewheel', this.handleMouseWheel);
         },
         initGame() {
             // 初始化地图
-            this.game_data.map = new Array(20);
-            for (let i = 0; i < this.game_data.map_row; i++) {
-                this.game_data.map[i] = new Array(20);
-                for (let j = 0; j < this.game_data.map_col; j++) {
-                    // 检查当前区域是否为棋盘区域
-                    if (ggl.checkIsInRegion(i, j, this.game_data.map_region)) {
-                        this.game_data.map[i][j] = 1;
-                    }
-                    // 检查当前区域是否为玩家区域
-                    else if (ggl.checkIsInRegion(i, j, this.game_data.player_regions[0])) {
-                        this.game_data.map[i][j] = 2;
-                    }
-                    // else if (ggl.checkIsInRegion(i, j, this.game_data.player_regions[1])) {
-                    //     this.game_data.map[i][j] = 4;
-                    // }
-                    // else if (ggl.checkIsInRegion(i, j, this.game_data.player_regions[2])) {
-                    //     this.game_data.map[i][j] = 6;
-                    // }
-                    // else if (ggl.checkIsInRegion(i, j, this.game_data.player_regions[3])) {
-                    //     this.game_data.map[i][j] = 8;
-                    // }
-                    else {
-                        this.game_data.map[i][j] = 0;
-                    }
-                }
+            this.game_data.map = ggl.initGameBoard();
+            
+            // 初始化其他相关内容
+            this.game_data.chesses = ggl.chesses;
+            this.game_data.player_infos = ggl.initPlayerInfo();
+            this.game_data.current_player = 3;
+            this.game_data.current_chess = null;
+            this.game_data.game_status = 0;
+            this.game_data.current_status = 0;
+            this.current_blocks_prev_pos = [];
+            this.current_chess = null;
+
+            // 屏蔽原生右键单击功能
+            document.oncontextmenu = function(e){
+                e.preventDefault();
             }
-        },   
+        }
     }
 }
 </script>
 
 <style scoped>
+
+@font-face {
+    font-family: Camicakan;
+    src: url('../font/Camicakan.otf');
+}
+
 #hall-view {
     width: 100%;
     height: 100%;
@@ -217,6 +343,8 @@ export default {
     border: solid 1px rgb(229, 233, 242);
     border-radius: 10px;
     flex: 2;
+    font-size: 22px;
+    /* font-family: Camicakan; */
 }
 
 #hall-view-right {
@@ -227,6 +355,7 @@ export default {
     margin-right: 10%;
     border-radius: 10px;
     flex: 5;
+    position: relative;
 }
 
 #hall-view-left-top {
@@ -251,5 +380,29 @@ export default {
 #tip-content {
     padding-top: 30%;
     font-size: 16px;
+}
+
+#offline-game-canvas {
+    /* background-color: #fafafa; */
+    position: absolute;
+    left: 0;
+    top: 0;
+}
+
+#offline-game-canvas-float {
+    background:rgba(255,255,255,0);
+    position: absolute;
+    left: 0;
+    top: 0;
+    z-index: 10;
+}
+
+.el-table >>> .success-row {
+    background: rgb(253,245,230);
+    font-weight: bold;
+}
+
+#give-up {
+    margin-top: 10%;
 }
 </style>
