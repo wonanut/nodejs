@@ -234,6 +234,11 @@ export default {
             }
         },
         gameLoop() {
+            // 一定要消除掉前一个玩家的状态信息，否则在前一个玩家主动认输时可能会出现意想不到的bug
+            this.game_data.current_status = 0;
+            this.current_blocks_prev_pos = [];
+            this.current_chess = null;
+
             if (this.game_data.game_status == 1) {
                 ele.Notification.info("游戏结束");
             }
