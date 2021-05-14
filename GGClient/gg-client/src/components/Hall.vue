@@ -1,7 +1,8 @@
 <template>
 <div id="hall-view">
     <div id="hall-view-left">
-        <div v-show="!show_offline_game" id="hall-view-left-body">
+        <!-- 在游戏大厅(game_view=0)或者匹配界面(game_view=2)会显示该左侧边栏 -->
+        <div v-show="game_view != 1" id="hall-view-left-body">
             <div id="hall-view-left-top">
                 <el-input v-model="nickname" class="input-with-select" :disabled=nickname_editable>
                     <el-button slot="append" v-if="nickname_editable" @click="handleEdit()" icon="el-icon-edit"></el-button>
@@ -9,14 +10,20 @@
                 </el-input>
             </div>
             <el-table :data="player_list" id="player-list">
-                <el-table-column label="当前在线玩家列表" :span="1">
+                <el-table-column label="玩家列表" :span="1">
                     <template slot-scope="scope">
                         <span>{{ scope.$index }}&nbsp;>&nbsp;{{ scope.row.name }}</span>
                     </template>
                 </el-table-column>
+                <el-table-column label="状态" :span="1">
+                    <template slot-scope="scope">
+                        <el-tag size="mini">{{ scope.row.status }}</el-tag>
+                    </template>
+                </el-table-column>
             </el-table>
         </div>
-        <div v-show="show_offline_game" id="hall-view-left-body">
+        <!-- 进入游戏状态(game_view=1)会显示该左侧栏 -->
+        <div v-show="game_view == 1" id="hall-view-left-body">
             <el-table :data="game_data.player_infos" id="player-list" :row-class-name="tableRowClassName">
                 <el-table-column label="玩家昵称" :span="1">
                     <template slot-scope="scope">
@@ -48,12 +55,15 @@
         </div>
     </div>
     <div id="hall-view-right" ref="canvasWrapper">
-        <div v-show="!show_offline_game" id="offline-game-tip">
-            <p id="tip-content">当前没有正在进行的游戏 来局单人游戏吧</p>
-            <el-button type="primary" round size="small" @click="handleStartOfflineGame">开始游戏</el-button>
+        <div v-show="game_view == 0" id="offline-game-tip">
+            <p id="tip-content">当前没有正在进行的游戏 你可以进入匹配队列等待其他联机队友 或者开始一场单机游戏</p>
+            <el-button type="primary" round size="normal" @click="handleStartOfflineGame">开始单机游戏</el-button>
+            <el-button type="success" round size="normal" @click="handleStartOnlineGame">加入匹配队列</el-button>
         </div>
-        <canvas v-show="show_offline_game" id="offline-game-canvas" width="800" height="600" ref="myCanvas"></canvas>
-        <canvas v-show="show_offline_game" id="offline-game-canvas-float" width="800" height="600" ref=myCanvasFloat></canvas>
+        <canvas v-show="game_view == 1" id="offline-game-canvas" width="800" height="600" ref="myCanvas"></canvas>
+        <canvas v-show="game_view == 1" id="offline-game-canvas-float" width="800" height="600" ref=myCanvasFloat></canvas>
+        <div v-show="game_view == 2" id="matching-queue">
+        </div>
     </div>
 </div>
 </template>
@@ -68,7 +78,8 @@ export default {
     data() {
         return {
             nickname_editable: true,
-            show_offline_game: false,
+            // 控制当前显示界面 0-大厅界面（初始值） 1-游戏界面 2-匹配界面
+            game_view: 0,
             canvas_config: {
                 canvas: null,
                 context: null,
@@ -93,14 +104,7 @@ export default {
                 current_blocks_prev_pos: [],
                 current_chess: null,
                 current_player: 3
-            },
-            player_list_test: [{
-                name: "PLAYER_XXXX"
-            }, {
-                name: "PLAYER_XXXX"
-            }, {
-                name: "PLAYER_XXXX"
-            }]
+            }
         }
     },
     props: {
@@ -134,7 +138,7 @@ export default {
             this.gameLoop();
         },
         handleQuitOfflineGame() {
-            this.show_offline_game = false;
+            this.game_view = 0;
         },
         handleEdit() {
             this.nickname_editable = false
@@ -142,8 +146,17 @@ export default {
         handleSubmitEdit() {
             this.nickname_editable = true
         },
+        handleStartOnlineGame() {
+            // 显示匹配界面
+            this.game_view = 2
+            // 向服务器端发送进入匹配队列的消息
+            this.ws.send(JSON.stringify({
+                name: this.nickname,
+                type: 'PLAYER_PREPARE'
+            }));
+        },
         handleStartOfflineGame() {
-            this.show_offline_game = true
+            this.game_view = 1
 
             // 初始化游戏数据
             this.initGame()

@@ -1,5 +1,28 @@
 var ws = require('nodejs-websocket')
 
+// 定义用户状态枚举类型
+if (typeof PlayerStatus == "undefined") {
+    var PlayerStatus = {};
+    PlayerStatus.OFFLINE = 0;           // 离线
+    PlayerStatus.ONHALL = 1;            // 在游戏大厅中
+    PlayerStatus.PLAY_OFFLINE = 2;      // 正在进行单机游戏
+    PlayerStatus.PREPARE = 3;           // 队列中
+    PlayerStatus.PLAY_ONLINE = 4;       // 正在进行联机游戏
+    PlayerStatus.MISS = 5;              // 状态丢失（产生这种状态的主要原因是中途断线）
+    PlayerStatus.ERROR = 6;             // 发生其他未知错误
+}
+
+// 用户状态编码对应文字
+playerStatusDecode = {
+    "0": "离线",
+    "1": "在线",
+    "2": "单机游戏中",
+    "3": "匹配中",
+    "4": "联机游戏中",
+    "5": "断线",
+    "6": "错误"
+}
+
 var server = ws.createServer(function(conn) {
     // 处理服务器端接收的消息
     conn.on('text', function(json) {
@@ -8,6 +31,7 @@ var server = ws.createServer(function(conn) {
         switch (data.type) {
             case 'PLAYER_LOGIN':
                 conn.nickname = data.name;
+                conn.status = PlayerStatus.ONHALL;
 
                 // 给当前客户端发送登录成功消息
                 singleConnect(conn, JSON.stringify({
@@ -23,7 +47,9 @@ var server = ws.createServer(function(conn) {
                 }));
 
                 break;
-
+            
+            case 'PLAYER_PREPARE':
+                console.log(data.name, data.type);
             default:
                 break;
         }
@@ -58,7 +84,10 @@ function singleConnect(conn, str) {
 function getAllPlayerName() {
     var playerList = [];
     server.connections.forEach(function(conn) {
-        playerList.push({"name": conn.nickname});
+        playerList.push({
+            "name": conn.nickname,
+            "status": playerStatusDecode[conn.status]
+        });
     });
 
     return playerList;

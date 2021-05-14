@@ -1,8 +1,7 @@
 <template>
 <div id="app">
-    <WelcomeView v-if="game_status == 1" @params="handleLogin" />
-    <HallView v-else-if="game_status == 0" :nickname="player_nickname" :ws="ws" :player_list="player_list" />
-
+    <WelcomeView v-if="game_status == 0" @params="handleLogin" />
+    <HallView v-else-if="game_status == 1" :nickname="player_nickname" :ws="ws" :player_list="player_list" />
 </div>
 </template>
 
