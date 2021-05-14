@@ -17,3 +17,12 @@
 * Vue怎么和WebSocket完美结合在一起，方便开发？[答案](https://www.jianshu.com/p/9d8b2e42328c)
 * 左右布局怎么搞？flex？absolute布局？[答案](https://jingyan.baidu.com/article/86112f1327a67366379787da.html)
 
+
+
+## 部分界面截图
+
+![](E:\nodejs\images\snapshot-1.jpg)
+
+![](E:\nodejs\images\snapshot-2.jpg)
+
+![](E:\nodejs\images\snapshot-3.jpg)
