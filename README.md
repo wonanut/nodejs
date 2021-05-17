@@ -21,8 +21,8 @@
 
 ## 部分界面截图
 
-![](E:\nodejs\images\snapshot-1.jpg)
+![](./images/snapshot-1.jpg)
 
-![](E:\nodejs\images\snapshot-2.jpg)
+![](./images/snapshot-2.jpg)
 
-![](E:\nodejs\images\snapshot-3.jpg)
+![](./images/snapshot-3.jpg)
