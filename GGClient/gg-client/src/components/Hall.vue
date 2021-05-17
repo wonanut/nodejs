@@ -63,6 +63,14 @@
         <canvas v-show="game_view == 1" id="offline-game-canvas" width="800" height="600" ref="myCanvas"></canvas>
         <canvas v-show="game_view == 1" id="offline-game-canvas-float" width="800" height="600" ref=myCanvasFloat></canvas>
         <div v-show="game_view == 2" id="matching-queue">
+            <p id="tip-content">正在匹配玩家中 请耐心等待</p>
+            <ul id="prepared-div">
+                <li v-for="item in prepare_list" :key="item">
+                    <el-avatar icon="el-icon-user-solid"></el-avatar>
+                    <p>{{ item }}</p>
+                </li>
+            </ul>
+            <el-button type="primary" round size="normal" @click="handleCancelPrepare">退出队列</el-button>
         </div>
     </div>
 </div>
@@ -80,6 +88,7 @@ export default {
             nickname_editable: true,
             // 控制当前显示界面 0-大厅界面（初始值） 1-游戏界面 2-匹配界面
             game_view: 0,
+            items: [1,2,3],
             canvas_config: {
                 canvas: null,
                 context: null,
@@ -119,6 +128,10 @@ export default {
         player_list: {
             type: Array,
             default: null
+        },
+        prepare_list: {
+            type: Array,
+            default: null
         }
     },
     mounted() {
@@ -138,13 +151,28 @@ export default {
             this.gameLoop();
         },
         handleQuitOfflineGame() {
-            this.game_view = 0;
+            // 显示游戏大厅界面
+            this.game_view = 0
+            // 向服务器端发送开始离线游戏的消息
+            this.ws.send(JSON.stringify({
+                name: this.nickname,
+                type: 'PLAYER_QUIT_OFFLINE_GAME'
+            }));
         },
         handleEdit() {
             this.nickname_editable = false
         },
         handleSubmitEdit() {
             this.nickname_editable = true
+        },
+        handleCancelPrepare() {
+            // 显示大厅界面
+            this.game_view = 0
+            // 向服务器端发送退出匹配队列的消息
+            this.ws.send(JSON.stringify({
+                name: this.nickname,
+                type: 'PLAYER_CANCEL_PREPARE'
+            }));
         },
         handleStartOnlineGame() {
             // 显示匹配界面
@@ -156,7 +184,13 @@ export default {
             }));
         },
         handleStartOfflineGame() {
+            // 显示游戏界面
             this.game_view = 1
+            // 向服务器端发送开始离线游戏的消息
+            this.ws.send(JSON.stringify({
+                name: this.nickname,
+                type: 'PLAYER_START_OFFLINE_GAME'
+            }));
 
             // 初始化游戏数据
             this.initGame()
@@ -396,7 +430,7 @@ export default {
 }
 
 #tip-content {
-    padding-top: 30%;
+    padding-top: 200px;
     font-size: 16px;
 }
 
@@ -422,5 +456,23 @@ export default {
 
 #give-up {
     margin-top: 10%;
+}
+
+#prepared-div {
+    border-radius: 10px;
+    width: wrap;
+    display: flex;
+    justify-content: center;
+    padding: 0px;
+}
+
+#prepared-div li {
+    list-style: none;
+    background-color: ghostwhite;
+    margin-left: 20px;
+    font-size: 10px;
+    margin: 10px;
+    padding: 20px;
+    padding-bottom: 10px;
 }
 </style>

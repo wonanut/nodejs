@@ -1,3 +1,13 @@
+/* 
+ * AUTHOR: Howard Wonanut
+ * DATE: 2021-05
+ * DESC: This is the core file for the Grid-Game online server which is in charge of all the connections with
+ * clients. All the connections between server and clients are based on websocket plugins provide by
+ * Node.js.
+ */
+
+// 特别说明 当前版本服务器是单线程的，服务器使用一个线程与所有客户端通信
+
 var ws = require('nodejs-websocket')
 
 // 定义用户状态枚举类型
@@ -23,12 +33,18 @@ playerStatusDecode = {
     "6": "错误"
 }
 
+// 在线游戏匹配队列
+var prepare_queue = {};
+// 在线游戏房间
+var online_room = {};
+
 var server = ws.createServer(function(conn) {
     // 处理服务器端接收的消息
     conn.on('text', function(json) {
         var data = JSON.parse(json)
-        console.log(data.name + '进入游戏');
+        console.log(data.name + ': ' + data.type);
         switch (data.type) {
+            // 用户登陆
             case 'PLAYER_LOGIN':
                 conn.nickname = data.name;
                 conn.status = PlayerStatus.ONHALL;
@@ -48,8 +64,87 @@ var server = ws.createServer(function(conn) {
 
                 break;
             
+            // 进入匹配队列
             case 'PLAYER_PREPARE':
-                console.log(data.name, data.type);
+                conn.status = PlayerStatus.PREPARE;
+                // 如果该玩家名字已经在队列中，将异常信息写在message中
+                if (prepare_queue.hasOwnProperty(conn.nickname)) {
+                    mesg = "该玩家名已经在匹配队列中，玩家名可能重复或者有非法操作";
+                }
+                else {
+                    prepare_queue[conn.nickname] = conn;
+                    mesg = "ok";
+                }
+
+                // 广播消息 更新玩家列表
+                boardcast(JSON.stringify({
+                    type: 'SERVER_BORADCAST_NEW_PREPARE',
+                    message: mesg,
+                    player_list: getAllPlayerName()
+                }));
+
+                // 组播消息 发送当前在匹配队列中的玩家列表
+                multicast(
+                    prepare_queue,
+                    JSON.stringify({
+                        type: 'SERVER_MULTICAST_PREPARE_QUEUE',
+                        prepare_list: Object.keys(prepare_queue)
+                    })
+                )
+
+                // 如果当前在匹配队列中的玩家人数等于4，将这四位玩家的信息从匹配队列中转移到新的游戏房间中
+                if (Object.keys(prepare_queue).length == 4) {
+
+                }
+                break;
+
+            // 离开匹配队列
+            case 'PLAYER_CANCEL_PREPARE':
+                conn.status = PlayerStatus.ONHALL;
+                // 这里也需要进行异常情况检测
+                if (prepare_queue.hasOwnProperty(conn.nickname)) {
+                    delete prepare_queue[conn.nickname];
+                    mesg = "ok";
+                }
+                else {
+                    mesg = "该玩家名不在匹配队列中";
+                }
+
+                // 广播消息 更新玩家列表
+                boardcast(JSON.stringify({
+                    type: 'SERVER_BORADCAST_CANCEL_PREPARE',
+                    message: mesg,
+                    player_list: getAllPlayerName()
+                }));
+
+                // 组播消息 发送当前在匹配队列中的玩家列表
+                multicast(
+                    prepare_queue,
+                    JSON.stringify({
+                        type: 'SERVER_MULTICAST_PREPARE_QUEUE',
+                        prepare_list: Object.keys(prepare_queue)
+                    })
+                )
+                break;
+
+            // 开始离线游戏
+            case 'PLAYER_START_OFFLINE_GAME':
+                conn.status = PlayerStatus.PLAY_OFFLINE;
+                boardcast(JSON.stringify({
+                    type: 'SERVER_BORADCAST_START_OFFLINE_GAME',
+                    player_list: getAllPlayerName()
+                }));
+                break;
+
+            // 退出离线游戏
+            case 'PLAYER_QUIT_OFFLINE_GAME':
+                conn.status = PlayerStatus.ONHALL;
+                boardcast(JSON.stringify({
+                    type: 'SERVER_BORADCAST_QUIT_OFFLINE_GAME',
+                    player_list: getAllPlayerName()
+                }));
+                break;
+
             default:
                 break;
         }
@@ -77,10 +172,25 @@ function boardcast(str) {
     });
 }
 
+// 定义组播函数 服务器可以使用该函数向指定客户端群体发送消息
+function multicast(queue, str) {
+    for (var name in queue) {
+        let conn = queue[name];
+        try {
+            conn.sendText(str);
+        } catch (error) {
+            console.error("Error while connecting to " + name);
+            delete queue[name];
+        }
+    }
+}
+
+// 服务器和某个客户端单向通信
 function singleConnect(conn, str) {
     conn.sendText(str);
 }
 
+// 获取所有玩家信息
 function getAllPlayerName() {
     var playerList = [];
     server.connections.forEach(function(conn) {
