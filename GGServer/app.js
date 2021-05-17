@@ -33,10 +33,10 @@ playerStatusDecode = {
     "6": "错误"
 }
 
-// 在线游戏匹配队列
+// 在线游戏匹配队列，以字典的形式存储（玩家昵称：连接对象）
 var prepare_queue = {};
-// 在线游戏房间
-var online_room = {};
+// 在线游戏房间，以字典的形式存储（房间ID：{玩家昵称：连接对象}）
+var online_rooms = {};
 
 var server = ws.createServer(function(conn) {
     // 处理服务器端接收的消息
@@ -94,7 +94,7 @@ var server = ws.createServer(function(conn) {
 
                 // 如果当前在匹配队列中的玩家人数等于4，将这四位玩家的信息从匹配队列中转移到新的游戏房间中
                 if (Object.keys(prepare_queue).length == 4) {
-
+                    handleCreateNewRoom(4);
                 }
                 break;
 
@@ -201,4 +201,61 @@ function getAllPlayerName() {
     });
 
     return playerList;
+}
+
+// 将当前匹配队列中的玩家移动到一个新的房间中
+// player_count 为游戏模式中的玩家数量，可以是2或者4，默认值为4
+function handleCreateNewRoom(player_count = 4) {
+    if (Object.keys(prepare_queue).length < player_count) {
+        return;
+    }
+
+    var room_id = createRoomID();
+    var room = {};
+
+    for (var name in prepare_queue) {
+        room[name] = prepare_queue[name];
+        delete prepare_queue[name];
+
+        player_count -= 1;
+        if (player_count == 0) break;        
+    }
+
+    // 将新创建的房间添加到所有在线房间中统一管理，key为房间对应的ID
+    online_rooms[room_id] = room;
+
+    // 向客户端组播创建房间成功的消息
+    multicast(
+        room,
+        JSON.stringify({
+            type: 'SERVER_MULTICAST_CREATE_ROOM',
+            room_id: room_id,
+            player_list: Object.keys(room)
+        })
+    )
+}
+
+// 生成房间号，需要核对生成的房间号是否会发生冲突
+function createRoomID() {
+    var room_name = __createRoomID();
+    while (__checkRoomIDConflict(room_name)) {
+        room_name = __createRoomID();
+    }
+
+    return room_name;
+}
+
+// 内部函数，生成一次房间号，不考虑是否会发生冲突
+function __createRoomID() {
+    var room_name = "ROOM_";
+    var alphbat_dict = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    for (let i = 0; i < 8; i++) {
+        room_name += alphbat_dict[Math.floor(Math.random()*alphbat_dict.length)];
+    }
+    return nick_name;
+}
+
+// 内部函数，用于检测该room_name是否与当前房间ID发生冲突
+function __checkRoomIDConflict(room_name) {
+    return false;
 }

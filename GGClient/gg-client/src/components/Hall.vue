@@ -132,6 +132,14 @@ export default {
         prepare_list: {
             type: Array,
             default: null
+        },
+        room_id: {
+            type: String,
+            default: null
+        },
+        room_player_list: {
+            type: Array,
+            default: null
         }
     },
     mounted() {

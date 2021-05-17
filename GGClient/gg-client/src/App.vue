@@ -1,7 +1,15 @@
 <template>
 <div id="app">
     <WelcomeView v-if="game_status == 0" @params="handleLogin" />
-    <HallView v-else-if="game_status == 1" :nickname="player_nickname" :ws="ws" :player_list="player_list" :prepare_list="prepare_list"/>
+    <HallView 
+        v-else-if="game_status == 1" 
+        :nickname="player_nickname" 
+        :ws="ws" 
+        :player_list="player_list" 
+        :prepare_list="prepare_list"
+        :room_player_list="room_player_list"
+        :room_id="room_id"
+    />
 </div>
 </template>
 
@@ -21,11 +29,14 @@ export default {
         return {
             ws: null,
             player_nickname: 'default',
-            // game_status 0-没有登录  1-进入大厅  2-等待组队  3-游戏中  4-其他
+            // game_status 0-登录界面（不需要和服务器建立联系） 1-登陆后的界面
             // 不同的game_status对应不同的显示内容
             game_status: 0,
             player_list: [],
-            prepare_list: []
+            prepare_list: [],
+            // room_player_list 和 room_id 是和在线游戏的房间有关的数据
+            room_player_list: [],
+            room_id: null
         }
     },
     destroyed() {
@@ -68,6 +79,10 @@ export default {
                     break;
                 case 'SERVER_MULTICAST_PREPARE_QUEUE':
                     this.prepare_list = data.prepare_list
+                    break;
+                case 'SERVER_MULTICAST_CREATE_ROOM':
+                    this.room_player_list = data.player_list
+                    this.room_id = data.room_id
                     break;
                 default:
                     break;
