@@ -142,9 +142,6 @@ export default {
             default: null
         }
     },
-    mounted() {
-        //
-    },
     methods: {
         tableRowClassName({row, rowIndex}) {
             if (row.idx === this.game_data.current_player) {

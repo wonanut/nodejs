@@ -23,7 +23,7 @@
         </div>
     </div>
     <div id="hall-view-right" ref="canvasWrapper">
-        <div v-show="game_view == 0" id="offline-game-tip">
+        <div id="offline-game-tip">
             <p id="tip-content">当前没有正在进行的游戏 你可以进入匹配队列等待其他联机队友 或者开始一场单机游戏</p>
             <el-button type="primary" round size="normal" @click="handleStartOfflineGame">开始单机游戏</el-button>
             <el-button type="success" round size="normal" @click="handleStartOnlineGame">加入匹配队列</el-button>
@@ -49,6 +49,10 @@ export default {
         },
         ws: {
             type: WebSocket,
+            default: null
+        },
+        player_list: {
+            type: Array,
             default: null
         }
     },

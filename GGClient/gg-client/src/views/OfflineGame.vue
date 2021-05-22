@@ -1,29 +1,7 @@
 <template>
 <div id="hall-view">
     <div id="hall-view-left">
-        <!-- 在游戏大厅(game_view=0)或者匹配界面(game_view=2)会显示该左侧边栏 -->
-        <div v-show="game_view != 1" id="hall-view-left-body">
-            <div id="hall-view-left-top">
-                <el-input v-model="nickname" class="input-with-select" :disabled=nickname_editable>
-                    <el-button slot="append" v-if="nickname_editable" @click="handleEdit()" icon="el-icon-edit"></el-button>
-                    <el-button slot="append" v-else @click="handleSubmitEdit()" icon="el-icon-check"></el-button>
-                </el-input>
-            </div>
-            <el-table :data="player_list" id="player-list">
-                <el-table-column label="玩家列表" :span="1">
-                    <template slot-scope="scope">
-                        <span>{{ scope.$index }}&nbsp;>&nbsp;{{ scope.row.name }}</span>
-                    </template>
-                </el-table-column>
-                <el-table-column label="状态" :span="1">
-                    <template slot-scope="scope">
-                        <el-tag size="mini">{{ scope.row.status }}</el-tag>
-                    </template>
-                </el-table-column>
-            </el-table>
-        </div>
-        <!-- 进入游戏状态(game_view=1)会显示该左侧栏 -->
-        <div v-show="game_view == 1" id="hall-view-left-body">
+        <div id="hall-view-left-body">
             <el-table :data="game_data.player_infos" id="player-list" :row-class-name="tableRowClassName">
                 <el-table-column label="玩家昵称" :span="1">
                     <template slot-scope="scope">
@@ -50,28 +28,13 @@
                     </template>
                 </el-table-column>
             </el-table>
-            <el-button id="give-up" @click="handleGiveup()" icon="el-icon-close" type="danger" round>认输</el-button>
+            <el-button id="give-up" @click="handleGiveup()" icon="el-icon-close" type="danger" round :editable="giveup_editable">认输</el-button>
             <el-button id="give-up" @click="handleQuitOfflineGame()" icon="el-icon-upload2" type="success" round>离开</el-button>
         </div>
     </div>
     <div id="hall-view-right" ref="canvasWrapper">
-        <div v-show="game_view == 0" id="offline-game-tip">
-            <p id="tip-content">当前没有正在进行的游戏 你可以进入匹配队列等待其他联机队友 或者开始一场单机游戏</p>
-            <el-button type="primary" round size="normal" @click="handleStartOfflineGame">开始单机游戏</el-button>
-            <el-button type="success" round size="normal" @click="handleStartOnlineGame">加入匹配队列</el-button>
-        </div>
-        <canvas v-show="game_view == 1" id="offline-game-canvas" width="800" height="600" ref="myCanvas"></canvas>
-        <canvas v-show="game_view == 1" id="offline-game-canvas-float" width="800" height="600" ref=myCanvasFloat></canvas>
-        <div v-show="game_view == 2" id="matching-queue">
-            <p id="tip-content">正在匹配玩家中 请耐心等待</p>
-            <ul id="prepared-div">
-                <li v-for="item in prepare_list" :key="item">
-                    <el-avatar icon="el-icon-user-solid"></el-avatar>
-                    <p>{{ item }}</p>
-                </li>
-            </ul>
-            <el-button type="primary" round size="normal" @click="handleCancelPrepare">退出队列</el-button>
-        </div>
+        <canvas id="offline-game-canvas" width="800" height="600" ref="myCanvas"></canvas>
+        <canvas id="offline-game-canvas-float" width="800" height="600" ref=myCanvasFloat></canvas>
     </div>
 </div>
 </template>
@@ -85,10 +48,7 @@ export default {
     name: "hall",
     data() {
         return {
-            nickname_editable: true,
-            // 控制当前显示界面 0-大厅界面（初始值） 1-游戏界面 2-匹配界面
-            game_view: 0,
-            items: [1,2,3],
+            giveup_editable: true,
             canvas_config: {
                 canvas: null,
                 context: null,
@@ -117,33 +77,36 @@ export default {
         }
     },
     props: {
-        nickname: {
+        player_nickname: {
             type: String,
-            defalut: "PLAYER_XXXX"
+            defaule: "Player_offline"
         },
         ws: {
             type: WebSocket,
             default: null
         },
-        player_list: {
-            type: Array,
-            default: null
-        },
-        prepare_list: {
-            type: Array,
-            default: null
-        },
-        room_id: {
-            type: String,
-            default: null
-        },
-        room_player_list: {
-            type: Array,
-            default: null
+        game_status: {
+            type: Number,
+            default: 0
         }
     },
     mounted() {
-        //
+            // 向服务器端发送开始离线游戏的消息
+            if (this.game_status == 1) {
+                this.ws.send(JSON.stringify({
+                    name: this.nickname,
+                    type: 'PLAYER_START_OFFLINE_GAME'
+                }));
+            }
+            
+            // 初始化游戏数据
+            this.initGame()
+
+            // 调用Canvas初始化游戏场景
+            this.initCanvas()
+
+            // 开始进入游戏循环
+            this.gameLoop()
     },
     methods: {
         tableRowClassName({row, rowIndex}) {
@@ -154,60 +117,22 @@ export default {
             }
         },
         handleGiveup() {
-            if (this.game_data.player_infos[this.game_data.current_player].status == "finished") return;
+            if (this.game_data.player_infos[this.game_data.current_player].status == "finished") {
+                giveup_editable = false;
+                console.log(giveup_editable);
+                return;
+            }
             this.game_data.player_infos[this.game_data.current_player].status = "failed";
             this.gameLoop();
         },
         handleQuitOfflineGame() {
-            // 显示游戏大厅界面
-            this.game_view = 0
             // 向服务器端发送开始离线游戏的消息
-            this.ws.send(JSON.stringify({
-                name: this.nickname,
-                type: 'PLAYER_QUIT_OFFLINE_GAME'
-            }));
-        },
-        handleEdit() {
-            this.nickname_editable = false
-        },
-        handleSubmitEdit() {
-            this.nickname_editable = true
-        },
-        handleCancelPrepare() {
-            // 显示大厅界面
-            this.game_view = 0
-            // 向服务器端发送退出匹配队列的消息
-            this.ws.send(JSON.stringify({
-                name: this.nickname,
-                type: 'PLAYER_CANCEL_PREPARE'
-            }));
-        },
-        handleStartOnlineGame() {
-            // 显示匹配界面
-            this.game_view = 2
-            // 向服务器端发送进入匹配队列的消息
-            this.ws.send(JSON.stringify({
-                name: this.nickname,
-                type: 'PLAYER_PREPARE'
-            }));
-        },
-        handleStartOfflineGame() {
-            // 显示游戏界面
-            this.game_view = 1
-            // 向服务器端发送开始离线游戏的消息
-            this.ws.send(JSON.stringify({
-                name: this.nickname,
-                type: 'PLAYER_START_OFFLINE_GAME'
-            }));
-
-            // 初始化游戏数据
-            this.initGame()
-
-            // 调用Canvas初始化游戏场景
-            this.initCanvas()
-
-            // 开始进入游戏循环
-            this.gameLoop()
+            if (this.game_status == 1) {
+                this.ws.send(JSON.stringify({
+                    name: this.nickname,
+                    type: 'PLAYER_QUIT_OFFLINE_GAME'
+                }));
+            }
         },
         handleMouseMove(event) {
             if (this.game_data.game_status == 1) {
@@ -418,10 +343,6 @@ export default {
     position: relative;
 }
 
-#hall-view-left-top {
-    /* padding-top: 5px; */
-}
-
 #nickname_input {
     width: 60%;
     padding-right: 8px;
@@ -443,7 +364,6 @@ export default {
 }
 
 #offline-game-canvas {
-    /* background-color: #fafafa; */
     position: absolute;
     left: 0;
     top: 0;

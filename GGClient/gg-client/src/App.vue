@@ -4,11 +4,15 @@
         v-if="game_status == 1 && game_view == 1" 
         :nickname="player_nickname" 
         :ws="ws"
+        :player_list="player_list"
         @updateGameView="handleUpdateGameView"
     />
     <OfflineGameView 
-        v-else-if="game_status == 1 && game_view == 2"
-
+        v-else-if="game_view == 2"
+        :player_nickname="player_nickname"
+        :ws="ws"
+        :game_status="game_status"
+        @updateGameView="handle"
     />
     <PrepareQueueView 
         v-else-if="game_status == 1 && game_view == 3"
@@ -17,8 +21,10 @@
         v-else-if="game_status == 1 && game_view == 4"
     />
     <WelcomeView 
-        v-else @login="handleLogin" 
+        v-else 
         :game_status="game_status"
+        @handleLogin="handleLogin" 
+        @handleUpdateGameView="handleUpdateGameView"
     />
 </div>
 </template>
@@ -36,7 +42,10 @@ export default {
     name: 'App',
     components: {
         WelcomeView,
-        HallView
+        HallView,
+        PrepareQueueView,
+        OfflineGameView,
+        OnlineRoomView
     },
     data() {
         return {
@@ -78,7 +87,9 @@ export default {
             switch(data.type) {
                 case 'SERVER_LOGINSTATUS':
                     if (data.message == 'success') {
-                        this.game_status = 1
+                        // 如果接收到服务器端的登陆成功消息，更新game_status和game_view
+                        this.game_status = 1;
+                        this.game_view = 1;
                     }
                     break;
                 case 'SERVER_BORADCAST_ALL':
@@ -127,24 +138,15 @@ export default {
             let conn_address = 'ws://' + host + ':' + port
 
             // 使用WebSocket与游戏服务器建立通信
-            try {
-                this.ws = new WebSocket(conn_address)
-                this.ws.onopen = () => {
-                    this.ws.send(JSON.stringify({
-                        name: this.player_nickname,
-                        type: 'PLAYER_LOGIN'
-                    }));
-                }
-                this.initWebSocket();
-
-                // 更新game_status和game_view
-                this.game_status = 1;
-                this.game_view = 1;
+            this.ws = new WebSocket(conn_address)
+            console.log(this.ws.readyState)
+            this.ws.onopen = () => {
+                this.ws.send(JSON.stringify({
+                    name: this.player_nickname,
+                    type: 'PLAYER_LOGIN'
+                }));
             }
-            catch {
-                console.log("Error while connecting to server, check and try again.");
-            }
-            
+            this.initWebSocket();
         },
         handleUpdateGameView(new_view) {
             this.game_view = new_view

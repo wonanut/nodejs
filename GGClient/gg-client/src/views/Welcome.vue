@@ -13,7 +13,8 @@
                 <el-input v-model="server_port"></el-input>
             </el-form-item>
         </el-form>
-            <el-button id="welcome-view-login" @click="handleLogin()" type="success">连接服务器</el-button>
+            <el-button id="welcome-view-button" @click="handleLogin()" type="success">连接服务器</el-button>
+            <el-button id="welcome-view-button" @click="handleStartOfflineGame()">开始离线游戏</el-button>
     </el-card>
 </div>
 </template>
@@ -39,7 +40,10 @@ export default {
     },
     methods: {
         handleLogin() {
-            this.$emit('login', this.player_nickname, this.server_host, this.server_port)
+            this.$emit('handleLogin', this.player_nickname, this.server_host, this.server_port);
+        },
+        handleStartOfflineGame() {
+            this.$emit('handleUpdateGameView', 2);
         }
     },
     mounted() {
@@ -68,7 +72,9 @@ function getRandomNickName() {
     padding: 30px;
 }
 
-#welcome-view-login {
+#welcome-view-button {
+    margin: 0px;
+    margin-top: 10px;
     width: 100%;
 }
 </style>
