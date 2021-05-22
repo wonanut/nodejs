@@ -1,21 +1,34 @@
 <template>
 <div id="app">
-    <WelcomeView v-if="game_status == 0" @params="handleLogin" />
     <HallView 
-        v-else-if="game_status == 1" 
+        v-if="game_status == 1 && game_view == 1" 
         :nickname="player_nickname" 
-        :ws="ws" 
-        :player_list="player_list" 
-        :prepare_list="prepare_list"
-        :room_player_list="room_player_list"
-        :room_id="room_id"
+        :ws="ws"
+        @updateGameView="handleUpdateGameView"
+    />
+    <OfflineGameView 
+        v-else-if="game_status == 1 && game_view == 2"
+
+    />
+    <PrepareQueueView 
+        v-else-if="game_status == 1 && game_view == 3"
+    />
+    <OnlineRoomView
+        v-else-if="game_status == 1 && game_view == 4"
+    />
+    <WelcomeView 
+        v-else @login="handleLogin" 
+        :game_status="game_status"
     />
 </div>
 </template>
 
 <script>
-import WelcomeView from '@/components/Welcome.vue'
-import HallView from '@/components/Hall.vue'
+import WelcomeView from '@/views/Welcome.vue'
+import HallView from '@/views/Hall.vue'
+import PrepareQueueView from '@/views/PrepareQueue.vue'
+import OfflineGameView from '@/views/OfflineGame.vue'
+import OnlineRoomView from '@/views/OnlineRoom.vue'
 
 const ele = require('element-ui')
 
@@ -29,9 +42,10 @@ export default {
         return {
             ws: null,
             player_nickname: 'default',
-            // game_status 0-登录界面（不需要和服务器建立联系） 1-登陆后的界面
-            // 不同的game_status对应不同的显示内容
+            // 不同的game_status对应不同的游戏状态 0-未登录（不需要和服务器建立联系） 1-已和服务器建立连接
             game_status: 0,
+            // 不同的game_view对应不同的具体的页面 0-登陆 1-大厅 2-离线游戏 3-匹配 4-在线房间
+            game_view: 0,
             player_list: [],
             prepare_list: [],
             // room_player_list 和 room_id 是和在线游戏的房间有关的数据
@@ -109,17 +123,31 @@ export default {
         // 登陆处理函数
         handleLogin(name, host, port) {
             this.player_nickname = name
+            // URL that will be connected with, the legal address likes ws://192.168.0.1:8080
             let conn_address = 'ws://' + host + ':' + port
 
             // 使用WebSocket与游戏服务器建立通信
-            this.ws = new WebSocket(conn_address)
-            this.ws.onopen = () => {
-                this.ws.send(JSON.stringify({
-                    name: this.player_nickname,
-                    type: 'PLAYER_LOGIN'
-                }));
+            try {
+                this.ws = new WebSocket(conn_address)
+                this.ws.onopen = () => {
+                    this.ws.send(JSON.stringify({
+                        name: this.player_nickname,
+                        type: 'PLAYER_LOGIN'
+                    }));
+                }
+                this.initWebSocket();
+
+                // 更新game_status和game_view
+                this.game_status = 1;
+                this.game_view = 1;
             }
-            this.initWebSocket();
+            catch {
+                console.log("Error while connecting to server, check and try again.");
+            }
+            
+        },
+        handleUpdateGameView(new_view) {
+            this.game_view = new_view
         }
     }
 }

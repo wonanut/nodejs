@@ -15,7 +15,9 @@
 
 * Vue中子组件同时向父组件传递多个值怎么实现？[答案](https://blog.csdn.net/weixin_43242112/article/details/108324304)
 * Vue怎么和WebSocket完美结合在一起，方便开发？[答案](https://www.jianshu.com/p/9d8b2e42328c)
-* 左右布局怎么搞？flex？absolute布局？[答案](https://jingyan.baidu.com/article/86112f1327a67366379787da.html)
+* 左右布局怎么实现？flex？absolute布局？[答案](https://jingyan.baidu.com/article/86112f1327a67366379787da.html)
+* websocket客户端在连接服务器的时候如何处理连接失败的情况？
+* 如何合理地设计该项目框架，尽可能降低各个模块之间的耦合性？
 
 
 

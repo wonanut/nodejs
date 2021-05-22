@@ -32,11 +32,14 @@ export default {
         }
     },
     props: {
-
+        game_status: {
+            type: Number,
+            defaule: 0
+        },
     },
     methods: {
         handleLogin() {
-            this.$emit('params', this.player_nickname, this.server_host, this.server_port)
+            this.$emit('login', this.player_nickname, this.server_host, this.server_port)
         }
     },
     mounted() {
