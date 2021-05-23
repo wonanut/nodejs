@@ -12,7 +12,7 @@
         :player_nickname="player_nickname"
         :ws="ws"
         :game_status="game_status"
-        @updateGameView="handle"
+        @updateGameView="handleUpdateGameView"
     />
     <PrepareQueueView 
         v-else-if="game_status == 1 && game_view == 3"
@@ -21,10 +21,10 @@
         v-else-if="game_status == 1 && game_view == 4"
     />
     <WelcomeView 
-        v-else 
+        v-show="game_status == 0"
         :game_status="game_status"
         @handleLogin="handleLogin" 
-        @handleUpdateGameView="handleUpdateGameView"
+        @updateGameView="handleUpdateGameView"
     />
 </div>
 </template>
@@ -139,7 +139,6 @@ export default {
 
             // 使用WebSocket与游戏服务器建立通信
             this.ws = new WebSocket(conn_address)
-            console.log(this.ws.readyState)
             this.ws.onopen = () => {
                 this.ws.send(JSON.stringify({
                     name: this.player_nickname,

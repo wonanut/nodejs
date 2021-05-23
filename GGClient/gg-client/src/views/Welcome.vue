@@ -13,7 +13,7 @@
                 <el-input v-model="server_port"></el-input>
             </el-form-item>
         </el-form>
-            <el-button id="welcome-view-button" @click="handleLogin()" type="success">连接服务器</el-button>
+            <el-button id="welcome-view-button" @click="handleLogin()" type="success" :disabled="login_disabled" :loading="login_disabled">连接服务器</el-button>
             <el-button id="welcome-view-button" @click="handleStartOfflineGame()">开始离线游戏</el-button>
     </el-card>
 </div>
@@ -29,21 +29,37 @@ export default {
             welcome: "Welcome to the GridGame",
             player_nickname: getRandomNickName(),
             server_host: 'localhost',
-            server_port: '12345'
+            server_port: '12345',
+            login_disabled: false,
         }
     },
     props: {
         game_status: {
             type: Number,
-            defaule: 0
+            default: 0
+        }
+    },
+    watch: {
+        game_status(new_value, old_value) {
+            console.log(new_value, old_value)
+            this.game_status = new_value;
         },
     },
     methods: {
+        // 登陆处理函数
         handleLogin() {
+            this.login_disabled = true;
             this.$emit('handleLogin', this.player_nickname, this.server_host, this.server_port);
+            // 点击登陆按钮之后等待3秒，之后根据game_status变量值核对是否登陆成功
+            setTimeout(() => {
+                if (this.game_status == 0) {
+                    this.login_disabled = false;
+                    ele.Message.error("登陆失败，请检查网络连接或者连接配置是否正确");
+                }
+            }, 3000);
         },
         handleStartOfflineGame() {
-            this.$emit('handleUpdateGameView', 2);
+            this.$emit('updateGameView', 2);
         }
     },
     mounted() {

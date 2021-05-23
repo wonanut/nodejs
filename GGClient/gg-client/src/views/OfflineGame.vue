@@ -28,8 +28,8 @@
                     </template>
                 </el-table-column>
             </el-table>
-            <el-button id="give-up" @click="handleGiveup()" icon="el-icon-close" type="danger" round :editable="giveup_editable">认输</el-button>
-            <el-button id="give-up" @click="handleQuitOfflineGame()" icon="el-icon-upload2" type="success" round>离开</el-button>
+            <el-button id="give-up" @click="handleGiveup()" icon="el-icon-close" type="danger" :disabled="game_data.current_status == 3">认输(Giveup)</el-button>
+            <el-button id="give-up" @click="handleQuitOfflineGame()" icon="el-icon-upload2" type="success">离开游戏(Quit)</el-button>
         </div>
     </div>
     <div id="hall-view-right" ref="canvasWrapper">
@@ -48,7 +48,6 @@ export default {
     name: "hall",
     data() {
         return {
-            giveup_editable: true,
             canvas_config: {
                 canvas: null,
                 context: null,
@@ -66,8 +65,8 @@ export default {
                 map_row: 32,
                 map_col: 32,
                 chesses: null,
+                giveup_count: 0,
                 player_infos: [],
-                game_status: 0,
                 current_status: 0, // 0 表示没有选中棋子 1 表示已经选中棋子但还没有放置 2 表示已经放置棋子到棋盘上但是还没有点击确定 3 表示游戏结束
                 current_blocks_chess_type: 0,
                 current_blocks_prev_pos: [],
@@ -91,10 +90,10 @@ export default {
         }
     },
     mounted() {
-            // 向服务器端发送开始离线游戏的消息
+            // 如果是登陆状态，向服务器端发送开始离线游戏的消息
             if (this.game_status == 1) {
                 this.ws.send(JSON.stringify({
-                    name: this.nickname,
+                    name: this.player_nickname,
                     type: 'PLAYER_START_OFFLINE_GAME'
                 }));
             }
@@ -116,29 +115,39 @@ export default {
                 return '';
             }
         },
+        // 认输处理函数
         handleGiveup() {
             if (this.game_data.player_infos[this.game_data.current_player].status == "finished") {
-                giveup_editable = false;
-                console.log(giveup_editable);
                 return;
             }
-            this.game_data.player_infos[this.game_data.current_player].status = "failed";
-            this.gameLoop();
-        },
-        handleQuitOfflineGame() {
-            // 向服务器端发送开始离线游戏的消息
-            if (this.game_status == 1) {
-                this.ws.send(JSON.stringify({
-                    name: this.nickname,
-                    type: 'PLAYER_QUIT_OFFLINE_GAME'
-                }));
-            }
-        },
-        handleMouseMove(event) {
-            if (this.game_data.game_status == 1) {
-                return;
+            this.game_data.player_infos[this.game_data.current_player].status = "giveup";
+            this.game_data.giveup_count += 1;
+
+            if (this.game_data.giveup_count == 4) {
+                this.game_data.current_status = 3;
             }
 
+            this.gameLoop();
+        },
+        // 退出离线游戏处理函数
+        handleQuitOfflineGame() {
+            if (this.game_status == 1) {
+                // 向服务器端发送开始离线游戏的消息
+                if (this.game_status == 1) {
+                    this.ws.send(JSON.stringify({
+                        name: this.player_nickname,
+                        type: 'PLAYER_QUIT_OFFLINE_GAME'
+                    }));
+                }
+
+                this.$emit('updateGameView', 1);
+            }
+            else {
+                this.$emit('updateGameView', 0);
+            }
+            
+        },
+        handleMouseMove(event) {
             let current_pos = this.getCurrentBlock(event);
             let row = current_pos[0];
             let col = current_pos[1];
@@ -148,10 +157,6 @@ export default {
             }
         },
         handleMouseDown(event) {
-            if (this.game_data.game_status == 1) {
-                return;
-            }
-
             // 鼠标按下事件对应处理函数，分为左击和右击两种情况处理
             event = event || window.event;
             let current_pos = this.getCurrentBlock(event);
@@ -201,9 +206,6 @@ export default {
             }
         },
         handleMouseWheel(event) {
-            if (this.game_data.game_status == 1) {
-                return;
-            }
             // 滚动鼠标滑轮可以旋转当前选中的棋子
             let current_pos = this.getCurrentBlock(event);
             let row = current_pos[0];
@@ -218,19 +220,22 @@ export default {
             this.game_data.current_status = 0;
             this.current_blocks_prev_pos = [];
             this.current_chess = null;
-
-            if (this.game_data.game_status == 1) {
+            
+            // 判断游戏是否已经结束
+            if (this.game_data.current_status == 3) {
                 ele.Notification.info("游戏结束");
+                return;
             }
+
             this.game_data.current_player = (this.game_data.current_player + 1) % 4;
             let cnt = 0;
-            while (this.game_data.player_infos[this.game_data.current_player].status == "failed") {
+            while (this.game_data.player_infos[this.game_data.current_player].status == "giveup") {
                 this.game_data.current_player = (this.game_data.current_player + 1) % 4;
                 cnt += 1;
                 if (cnt == 4) break;
             }
             if (cnt == 4) {
-                this.game_data.game_status = 1;
+                this.game_data.current_status = 3;
                 ele.Notification.info("游戏结束");
             }
             else {
@@ -290,8 +295,8 @@ export default {
             this.game_data.player_infos = ggl.initPlayerInfo();
             this.game_data.current_player = 3;
             this.game_data.current_chess = null;
-            this.game_data.game_status = 0;
             this.game_data.current_status = 0;
+            this.game_data.giveup_count = 0;
             this.current_blocks_prev_pos = [];
             this.current_chess = null;
 

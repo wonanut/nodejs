@@ -67,7 +67,7 @@ export default {
             this.$emit('updateGameView', 3)
         },
         handleStartOfflineGame() {
-            this.$tmie('updateGameView', 2)
+            this.$emit('updateGameView', 2)
         }
     }
 }
