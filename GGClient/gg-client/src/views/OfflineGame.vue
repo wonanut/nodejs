@@ -2,32 +2,10 @@
 <div id="hall-view">
     <div id="hall-view-left">
         <div id="hall-view-left-body">
-            <el-table :data="game_data.player_infos" id="player-list" :row-class-name="tableRowClassName">
-                <el-table-column label="玩家昵称" :span="1">
-                    <template slot-scope="scope">
-                        <span>
-                            <div v-if="scope.row.idx == 0" style="color: rgb(255,0,0)">▊ {{ scope.row.name }}</div>
-                            <div v-else-if="scope.row.idx == 1" style="color: rgb(0,176,80)" >▊ {{ scope.row.name }}</div>
-                            <div v-else-if="scope.row.idx == 2" style="color: rgb(0,176,240)" >▊ {{ scope.row.name }}</div>
-                            <div v-else style="color: rgb(255,192,0)" >▊ {{ scope.row.name }}</div>
-                        </span>
-                    </template>
-                </el-table-column>
-                <el-table-column label="剩余方块" :span="1">
-                    <template slot-scope="scope">
-                        <span>{{ scope.row.remains }} blocks</span>
-                    </template>
-                </el-table-column>
-                <el-table-column label="状态" :span="1">
-                    <template slot-scope="scope">
-                        <span>
-                            <el-tag v-if="scope.row.status == 'inited'" >{{ scope.row.status }}</el-tag>
-                            <el-tag v-else-if="scope.row.status == 'normal'" type="success">{{ scope.row.status }}</el-tag>
-                            <el-tag v-else type="info" >{{ scope.row.status }}</el-tag>
-                        </span>
-                    </template>
-                </el-table-column>
-            </el-table>
+            <ScoreBoardComponent
+                :current_player="game_data.current_player"
+                :player_infos="game_data.player_infos"
+            />
             <el-button id="give-up" @click="handleGiveup()" icon="el-icon-close" type="danger" :disabled="game_data.current_status == 3">认输(Giveup)</el-button>
             <el-button id="give-up" @click="handleQuitOfflineGame()" icon="el-icon-upload2" type="success">离开游戏(Quit)</el-button>
         </div>
@@ -44,8 +22,13 @@ const ele = require('element-ui')
 const ggl = require('@/js/gg.js')
 const can = require('@/js/canvas.js')
 
+import ScoreBoardComponent from '@/components/ScoreBoardComponent.vue'
+
 export default {
     name: "hall",
+    components: {
+        ScoreBoardComponent
+    },
     data() {
         return {
             canvas_config: {
@@ -108,13 +91,6 @@ export default {
         this.gameLoop()
     },
     methods: {
-        tableRowClassName({row, rowIndex}) {
-            if (row.idx === this.game_data.current_player) {
-                return 'success-row';
-            } else {
-                return '';
-            }
-        },
         // 认输处理函数
         handleGiveup() {
             if (this.game_data.player_infos[this.game_data.current_player].status == "finished") {
@@ -148,6 +124,10 @@ export default {
             
         },
         handleMouseMove(event) {
+            if (this.game_data.current_status == 3) {
+                return;
+            }
+
             let current_pos = this.getCurrentBlock(event);
             let row = current_pos[0];
             let col = current_pos[1];
@@ -157,6 +137,10 @@ export default {
             }
         },
         handleMouseDown(event) {
+            if (this.game_data.current_status == 3) {
+                return;
+            }
+
             // 鼠标按下事件对应处理函数，分为左击和右击两种情况处理
             event = event || window.event;
             let current_pos = this.getCurrentBlock(event);
@@ -206,6 +190,10 @@ export default {
             }
         },
         handleMouseWheel(event) {
+            if (this.game_data.current_status == 3) {
+                return;
+            }
+            
             // 滚动鼠标滑轮可以旋转当前选中的棋子
             let current_pos = this.getCurrentBlock(event);
             let row = current_pos[0];
@@ -376,11 +364,6 @@ export default {
     left: 0;
     top: 0;
     z-index: 10;
-}
-
-.el-table >>> .success-row {
-    background: rgb(253,245,230);
-    font-weight: bold;
 }
 
 #give-up {

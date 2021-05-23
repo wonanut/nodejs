@@ -1,7 +1,7 @@
 <template>
 <div id="app">
     <WelcomeView 
-        v-show="game_status == 0"
+        v-show="game_view == 0"
         :game_status="game_status"
         @handleLogin="handleLogin" 
         @updateGameView="handleUpdateGameView"

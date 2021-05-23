@@ -144,6 +144,27 @@ var server = ws.createServer(function(conn) {
                     player_list: getAllPlayerName()
                 }));
                 break;
+            
+            // 在线游戏房间相关处理函数
+            case 'ROOM_UPDATE':
+                let room_id = data.room_id;
+                let player_nickname = data.player_nickname;
+                let operation_type = data.operation_type;
+
+                multicast(
+                    online_rooms[room_id],
+                    JSON.stringify({
+                        type: 'SERVER_MULTICAST_OPERATION',
+                        player_nickname: player_nickname,
+                        message: "TEST"
+                    })
+                )
+
+                switch(operation_type) {
+                    default:
+                        break;
+                }
+                break;
 
             default:
                 break;
@@ -214,6 +235,7 @@ function handleCreateNewRoom(player_count = 4) {
     var room = {};
 
     for (var name in prepare_queue) {
+        prepare_queue[name].status = PlayerStatus.PLAY_ONLINE;
         room[name] = prepare_queue[name];
         delete prepare_queue[name];
 
