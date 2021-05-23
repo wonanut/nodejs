@@ -252,7 +252,7 @@ function __createRoomID() {
     for (let i = 0; i < 8; i++) {
         room_name += alphbat_dict[Math.floor(Math.random()*alphbat_dict.length)];
     }
-    return nick_name;
+    return room_name;
 }
 
 // 内部函数，用于检测该room_name是否与当前房间ID发生冲突

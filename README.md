@@ -17,7 +17,7 @@
 - [x] Vue怎么和WebSocket完美结合在一起，方便开发？[答案](https://www.jianshu.com/p/9d8b2e42328c)
 - [x] 左右布局怎么实现？flex？absolute布局？[答案](https://jingyan.baidu.com/article/86112f1327a67366379787da.html)
 - [x] websocket客户端在连接服务器的时候如何处理连接失败的情况？
-- [x] 父子组件如何同步更新数据，即在父组件中修改数据后如何将更新后的结果传递给子组件？
+- [x] 子组件如何针对父组件中数值的改变进行相应的处理？
   - [x] 使用watch或者computed即可更新
 - [ ] 如何合理地设计该项目框架，尽可能降低各个模块之间的耦合性？
 - [ ] vue中watch和computed的用法以及区别？

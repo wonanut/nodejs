@@ -90,22 +90,22 @@ export default {
         }
     },
     mounted() {
-            // 如果是登陆状态，向服务器端发送开始离线游戏的消息
-            if (this.game_status == 1) {
-                this.ws.send(JSON.stringify({
-                    name: this.player_nickname,
-                    type: 'PLAYER_START_OFFLINE_GAME'
-                }));
-            }
-            
-            // 初始化游戏数据
-            this.initGame()
+        // 如果是登陆状态，向服务器端发送开始离线游戏的消息
+        if (this.game_status == 1) {
+            this.ws.send(JSON.stringify({
+                name: this.player_nickname,
+                type: 'PLAYER_START_OFFLINE_GAME'
+            }));
+        }
+        
+        // 初始化游戏数据
+        this.initGame()
 
-            // 调用Canvas初始化游戏场景
-            this.initCanvas()
+        // 调用Canvas初始化游戏场景
+        this.initCanvas()
 
-            // 开始进入游戏循环
-            this.gameLoop()
+        // 开始进入游戏循环
+        this.gameLoop()
     },
     methods: {
         tableRowClassName({row, rowIndex}) {
@@ -311,16 +311,12 @@ export default {
 
 <style scoped>
 
-@font-face {
-    font-family: Camicakan;
-    src: url('../font/Camicakan.otf');
-}
-
 #hall-view {
     width: 100%;
     height: 100%;
     text-align: center;
     display: flex;
+    overflow: hidden;
 }
 
 #hall-view-left {
@@ -389,23 +385,5 @@ export default {
 
 #give-up {
     margin-top: 10%;
-}
-
-#prepared-div {
-    border-radius: 10px;
-    width: wrap;
-    display: flex;
-    justify-content: center;
-    padding: 0px;
-}
-
-#prepared-div li {
-    list-style: none;
-    background-color: ghostwhite;
-    margin-left: 20px;
-    font-size: 10px;
-    margin: 10px;
-    padding: 20px;
-    padding-bottom: 10px;
 }
 </style>

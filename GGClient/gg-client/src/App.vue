@@ -1,8 +1,14 @@
 <template>
 <div id="app">
+    <WelcomeView 
+        v-show="game_status == 0"
+        :game_status="game_status"
+        @handleLogin="handleLogin" 
+        @updateGameView="handleUpdateGameView"
+    />
     <HallView 
         v-if="game_status == 1 && game_view == 1" 
-        :nickname="player_nickname" 
+        :player_nickname="player_nickname" 
         :ws="ws"
         :player_list="player_list"
         @updateGameView="handleUpdateGameView"
@@ -16,15 +22,14 @@
     />
     <PrepareQueueView 
         v-else-if="game_status == 1 && game_view == 3"
+        :player_nickname="player_nickname" 
+        :ws="ws"
+        :player_list="player_list"
+        :prepare_list="prepare_list"
+        @updateGameView="handleUpdateGameView"
     />
     <OnlineRoomView
         v-else-if="game_status == 1 && game_view == 4"
-    />
-    <WelcomeView 
-        v-show="game_status == 0"
-        :game_status="game_status"
-        @handleLogin="handleLogin" 
-        @updateGameView="handleUpdateGameView"
     />
 </div>
 </template>
@@ -93,21 +98,22 @@ export default {
                     }
                     break;
                 case 'SERVER_BORADCAST_ALL':
-                    this.player_list = data.player_list
-                    ele.Notification.success("欢迎新玩家进入GG游戏大厅")
+                    this.player_list = data.player_list;
+                    ele.Notification.success("欢迎新玩家进入GG游戏大厅");
                     break;
                 case 'SERVER_BORADCAST_NEW_PREPARE':
                 case 'SERVER_BORADCAST_CANCEL_PREPARE':
                 case 'SERVER_BORADCAST_START_OFFLINE_GAME':
                 case 'SERVER_BORADCAST_QUIT_OFFLINE_GAME':
-                    this.player_list = data.player_list
+                    this.player_list = data.player_list;
                     break;
                 case 'SERVER_MULTICAST_PREPARE_QUEUE':
-                    this.prepare_list = data.prepare_list
+                    this.prepare_list = data.prepare_list;
                     break;
                 case 'SERVER_MULTICAST_CREATE_ROOM':
-                    this.room_player_list = data.player_list
-                    this.room_id = data.room_id
+                    this.room_player_list = data.player_list;
+                    this.room_id = data.room_id;
+                    this.game_view = 4;
                     break;
                 default:
                     break;
@@ -117,7 +123,6 @@ export default {
         closeWebSocket(e) {
             if (this.ws) {
                 this.ws.close();
-                let _this = this
                 this.ws.onclose = function(evt) {
                     console.log("websocket已关闭"); 
                 };

@@ -3,23 +3,14 @@
     <div id="hall-view-left">
         <div id="hall-view-left-body">
             <div id="hall-view-left-top">
-                <el-input v-model="nickname" class="input-with-select" :disabled=nickname_editable>
+                <el-input v-model="player_nickname" class="input-with-select" :disabled=nickname_editable>
                     <el-button slot="append" v-if="nickname_editable" @click="handleEdit()" icon="el-icon-edit"></el-button>
                     <el-button slot="append" v-else @click="handleSubmitEdit()" icon="el-icon-check"></el-button>
                 </el-input>
             </div>
-            <el-table :data="player_list" id="player-list">
-                <el-table-column label="玩家列表" :span="1">
-                    <template slot-scope="scope">
-                        <span>{{ scope.$index }}&nbsp;>&nbsp;{{ scope.row.name }}</span>
-                    </template>
-                </el-table-column>
-                <el-table-column label="状态" :span="1">
-                    <template slot-scope="scope">
-                        <el-tag size="mini">{{ scope.row.status }}</el-tag>
-                    </template>
-                </el-table-column>
-            </el-table>
+            <PlayerListComponent 
+                :player_list="player_list"
+            />
         </div>
     </div>
     <div id="hall-view-right" ref="canvasWrapper">
@@ -33,17 +24,20 @@
 </template>
 
 <script>
-const ele = require('element-ui')
+import PlayerListComponent from '@/components/PlayerListComponent.vue'
 
 export default {
     name: "hall",
+    components: {
+        PlayerListComponent
+    },
     data() {
         return {
             nickname_editable: true,
         }
     },
     props: {
-        nickname: {
+        player_nickname: {
             type: String,
             defalut: "PLAYER_XXXX"
         },
@@ -83,14 +77,16 @@ export default {
 #hall-view {
     width: 100%;
     height: 100%;
+    padding: 0px;
+    margin: 0px;
     text-align: center;
     display: flex;
+    overflow: hidden;
 }
 
 #hall-view-left {
     width: 20%;
     height: 80%;
-    /* background-color: rgb(229, 233, 242); */
     margin: 5%;
     margin-left: 10%;
     margin-right: 0;
@@ -98,13 +94,11 @@ export default {
     border-radius: 10px;
     flex: 2;
     font-size: 22px;
-    /* font-family: Camicakan; */
 }
 
 #hall-view-right {
     width: 70%;
     height: 80%;
-    /* background-color: rgb(229, 233, 242); */
     margin: 5%;
     margin-right: 10%;
     border-radius: 10px;
@@ -112,18 +106,9 @@ export default {
     position: relative;
 }
 
-#hall-view-left-top {
-    /* padding-top: 5px; */
-}
-
 #nickname_input {
     width: 60%;
     padding-right: 8px;
-}
-
-#player-list {
-    width: 95%;
-    margin: 10px;
 }
 
 .input-with-select {
@@ -134,47 +119,5 @@ export default {
 #tip-content {
     padding-top: 200px;
     font-size: 16px;
-}
-
-#offline-game-canvas {
-    /* background-color: #fafafa; */
-    position: absolute;
-    left: 0;
-    top: 0;
-}
-
-#offline-game-canvas-float {
-    background:rgba(255,255,255,0);
-    position: absolute;
-    left: 0;
-    top: 0;
-    z-index: 10;
-}
-
-.el-table >>> .success-row {
-    background: rgb(253,245,230);
-    font-weight: bold;
-}
-
-#give-up {
-    margin-top: 10%;
-}
-
-#prepared-div {
-    border-radius: 10px;
-    width: wrap;
-    display: flex;
-    justify-content: center;
-    padding: 0px;
-}
-
-#prepared-div li {
-    list-style: none;
-    background-color: ghostwhite;
-    margin-left: 20px;
-    font-size: 10px;
-    margin: 10px;
-    padding: 20px;
-    padding-bottom: 10px;
 }
 </style>

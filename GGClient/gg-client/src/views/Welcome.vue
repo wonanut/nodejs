@@ -1,7 +1,7 @@
 <template>
 <div id="welcome-view">
     <el-card id="welcome-view-card">
-        <h2>{{ welcome }}</h2>
+        <p id="welcome-title">{{ welcome }}</p>
         <el-form label-width="80px">
             <el-form-item label="设置昵称">
                 <el-input v-model="player_nickname"></el-input>
@@ -41,7 +41,6 @@ export default {
     },
     watch: {
         game_status(new_value, old_value) {
-            console.log(new_value, old_value)
             this.game_status = new_value;
         },
     },
@@ -78,13 +77,27 @@ function getRandomNickName() {
 </script>
 
 <style scoped>
+@font-face {
+    font-family: Camicakan;
+    src: url('../font/Camicakan.otf');
+}
+
+#welcome-title {
+    font-family: Camicakan;
+    font-size: 35px;
+    margin-top: 5px;
+    color: #2c3e50;
+}
+
 #welcome-view {
-    text-align: center;
+    height: 80%;
+    display: grid;
+    align-items: center;
+    justify-items: center;
 }
 
 #welcome-view-card {
     width: 30%;
-    margin: 10% auto;
     padding: 30px;
 }
 
