@@ -30,6 +30,10 @@
     />
     <OnlineRoomView
         v-else-if="game_status == 1 && game_view == 4"
+        :player_nickname="player_nickname" 
+        :ws="ws"
+        :room_player_list="room_player_list"
+        :room_id="room_id"
     />
 </div>
 </template>
@@ -55,7 +59,7 @@ export default {
     data() {
         return {
             ws: null,
-            player_nickname: 'default',
+            player_nickname: 'PLAYER_offline',
             // 不同的game_status对应不同的游戏状态 0-未登录（不需要和服务器建立联系） 1-已和服务器建立连接
             game_status: 0,
             // 不同的game_view对应不同的具体的页面 0-登陆 1-大厅 2-离线游戏 3-匹配 4-在线房间
@@ -97,14 +101,16 @@ export default {
                         this.game_view = 1;
                     }
                     break;
-                case 'SERVER_BORADCAST_ALL':
+                case 'SERVER_BROADCAST_ALL':
                     this.player_list = data.player_list;
                     ele.Notification.success("欢迎新玩家进入GG游戏大厅");
                     break;
-                case 'SERVER_BORADCAST_NEW_PREPARE':
-                case 'SERVER_BORADCAST_CANCEL_PREPARE':
-                case 'SERVER_BORADCAST_START_OFFLINE_GAME':
-                case 'SERVER_BORADCAST_QUIT_OFFLINE_GAME':
+                case 'SERVER_BROADCAST_NEW_PREPARE':
+                case 'SERVER_BROADCAST_CANCEL_PREPARE':
+                case 'SERVER_BROADCAST_START_OFFLINE_GAME':
+                case 'SERVER_BROADCAST_QUIT_OFFLINE_GAME':
+                case 'SERVER_BROADCAST_START_ONLINE_GAME':
+                case 'SERVER_BROADCAST_QUIT_ONLINE_GAME':
                     this.player_list = data.player_list;
                     break;
                 case 'SERVER_MULTICAST_PREPARE_QUEUE':

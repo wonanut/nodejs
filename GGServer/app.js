@@ -48,6 +48,7 @@ var server = ws.createServer(function(conn) {
             case 'PLAYER_LOGIN':
                 conn.nickname = data.name;
                 conn.status = PlayerStatus.ONHALL;
+                conn.room_id = null;
 
                 // 给当前客户端发送登录成功消息
                 singleConnect(conn, JSON.stringify({
@@ -56,8 +57,8 @@ var server = ws.createServer(function(conn) {
                 }))
                 
                 // 在大厅广播消息
-                boardcast(JSON.stringify({
-                    type: 'SERVER_BORADCAST_ALL',
+                broadcast(JSON.stringify({
+                    type: 'SERVER_BROADCAST_ALL',
                     message: data.name + '进入游戏',
                     player_list: getAllPlayerName()
                 }));
@@ -77,8 +78,8 @@ var server = ws.createServer(function(conn) {
                 }
 
                 // 广播消息 更新玩家列表
-                boardcast(JSON.stringify({
-                    type: 'SERVER_BORADCAST_NEW_PREPARE',
+                broadcast(JSON.stringify({
+                    type: 'SERVER_BROADCAST_NEW_PREPARE',
                     message: mesg,
                     player_list: getAllPlayerName()
                 }));
@@ -111,8 +112,8 @@ var server = ws.createServer(function(conn) {
                 }
 
                 // 广播消息 更新玩家列表
-                boardcast(JSON.stringify({
-                    type: 'SERVER_BORADCAST_CANCEL_PREPARE',
+                broadcast(JSON.stringify({
+                    type: 'SERVER_BROADCAST_CANCEL_PREPARE',
                     message: mesg,
                     player_list: getAllPlayerName()
                 }));
@@ -130,8 +131,8 @@ var server = ws.createServer(function(conn) {
             // 开始离线游戏
             case 'PLAYER_START_OFFLINE_GAME':
                 conn.status = PlayerStatus.PLAY_OFFLINE;
-                boardcast(JSON.stringify({
-                    type: 'SERVER_BORADCAST_START_OFFLINE_GAME',
+                broadcast(JSON.stringify({
+                    type: 'SERVER_BROADCAST_START_OFFLINE_GAME',
                     player_list: getAllPlayerName()
                 }));
                 break;
@@ -139,13 +140,53 @@ var server = ws.createServer(function(conn) {
             // 退出离线游戏
             case 'PLAYER_QUIT_OFFLINE_GAME':
                 conn.status = PlayerStatus.ONHALL;
-                boardcast(JSON.stringify({
-                    type: 'SERVER_BORADCAST_QUIT_OFFLINE_GAME',
+                broadcast(JSON.stringify({
+                    type: 'SERVER_BROADCAST_QUIT_OFFLINE_GAME',
+                    player_list: getAllPlayerName()
+                }));
+                break;
+
+            case 'PLAYER_START_ONLINE_GAME':
+                conn.status = PlayerStatus.PLAY_ONLINE;
+                broadcast(JSON.stringify({
+                    type: 'SERVER_BROADCAST_START_ONLINE_GAME',
                     player_list: getAllPlayerName()
                 }));
                 break;
             
-            // 在线游戏房间相关处理函数
+            case 'PLAYER_QUIT_ONLINE_GAME':
+                // 组播该玩家在游戏房间中的游戏状态
+                multicast(
+                    online_rooms[conn.room_id],
+                    JSON.stringify({
+                        type: 'SERVER_MULTICAST_QUIT_ONLINE_ROOM',
+                        player_nickname: conn.name,
+                        message: "quit"
+                }));
+                conn.room_id = null;
+
+                // 广播更新该玩家的游戏状态
+                conn.status = PlayerStatus.ONHALL;
+                broadcast(JSON.stringify({
+                    type: 'SERVER_BROADCAST_QUIT_ONLINE_ROOM',
+                    player_list: getAllPlayerName()
+                }));
+
+                break;
+            
+            case 'PLAYER_GIVEUP_ONLINE_GAME':
+                multicast(
+                    online_rooms[conn.room_id],
+                    JSON.stringify({
+                        type: 'SERVER_MULTICAST_GIVEUP_ONLINE_ROOM',
+                        player_nickname: player_nickname,
+                        message: "giveup"
+                }));
+                break;
+
+            case 'PLAYER_OPERATION_ONLINE_GAME':
+                break;
+
             case 'ROOM_UPDATE':
                 let room_id = data.room_id;
                 let player_nickname = data.player_nickname;
@@ -173,8 +214,8 @@ var server = ws.createServer(function(conn) {
 
     // 处理客户端关闭的情况
     conn.on('close', function() {
-        boardcast(JSON.stringify({
-            type: 'SERVER_BORADCAST_ALL',
+        broadcast(JSON.stringify({
+            type: 'SERVER_BROADCAST_ALL',
             message: conn.nickname + '离开游戏'
         }));
     });
@@ -187,7 +228,7 @@ var server = ws.createServer(function(conn) {
 }).listen(12345);
 
 // 定义广播函数 服务器可以使用该函数向所有的客户端发送消息
-function boardcast(str) {
+function broadcast(str) {
     server.connections.forEach(function(conn) {
         conn.sendText(str);
     });
@@ -232,29 +273,33 @@ function handleCreateNewRoom(player_count = 4) {
     }
 
     var room_id = createRoomID();
-    var room = {};
+    var room_conns = {};
+    var room_config = {};
 
     for (var name in prepare_queue) {
-        prepare_queue[name].status = PlayerStatus.PLAY_ONLINE;
-        room[name] = prepare_queue[name];
+        prepare_queue[name].room_id = room_id;
+        room_conns[name] = prepare_queue[name];
         delete prepare_queue[name];
 
         player_count -= 1;
-        if (player_count == 0) break;        
+        if (player_count == 0) break;
     }
 
     // 将新创建的房间添加到所有在线房间中统一管理，key为房间对应的ID
-    online_rooms[room_id] = room;
+    room_config = __initRoomConfiguration(Object.keys(room_conns));
+    online_rooms[room_id] = {};
+    online_rooms[room_id]["conns"] = room_conns;
+    online_rooms[room_id]["config"] = room_config;
 
     // 向客户端组播创建房间成功的消息
     multicast(
-        room,
+        room_conns,
         JSON.stringify({
             type: 'SERVER_MULTICAST_CREATE_ROOM',
             room_id: room_id,
-            player_list: Object.keys(room)
+            player_list: Object.keys(room_conns)
         })
-    )
+    );
 }
 
 // 生成房间号，需要核对生成的房间号是否会发生冲突
@@ -278,6 +323,21 @@ function __createRoomID() {
 }
 
 // 内部函数，用于检测该room_name是否与当前房间ID发生冲突
+// TODO 实现该函数
 function __checkRoomIDConflict(room_name) {
     return false;
+}
+
+// 内部函数，用于初始化游戏房间相关信息
+function __initRoomConfiguration(player_list) {
+    var player_infos = [];
+    for (let i = 0; i < player_list.length; i++) {
+        var item = {};
+        item['idx'] = i;
+        item['name'] = player_list[i];
+        item['remains'] = 89;
+        item['status'] = 'inited';
+        player_infos.push(item);
+    }
+    return player_infos;
 }

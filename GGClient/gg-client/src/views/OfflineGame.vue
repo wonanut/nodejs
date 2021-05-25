@@ -5,6 +5,7 @@
             <ScoreBoardComponent
                 :current_player="game_data.current_player"
                 :player_infos="game_data.player_infos"
+                :player_name="player_nickname"
             />
             <el-button id="give-up" @click="handleGiveup()" icon="el-icon-close" type="danger" :disabled="game_data.current_status == 3">认输(Giveup)</el-button>
             <el-button id="give-up" @click="handleQuitOfflineGame()" icon="el-icon-upload2" type="success">离开游戏(Quit)</el-button>
@@ -61,7 +62,7 @@ export default {
     props: {
         player_nickname: {
             type: String,
-            defaule: "Player_offline"
+            defaule: "PLAYER_offline"
         },
         ws: {
             type: WebSocket,
@@ -109,12 +110,10 @@ export default {
         handleQuitOfflineGame() {
             if (this.game_status == 1) {
                 // 向服务器端发送开始离线游戏的消息
-                if (this.game_status == 1) {
-                    this.ws.send(JSON.stringify({
-                        name: this.player_nickname,
-                        type: 'PLAYER_QUIT_OFFLINE_GAME'
-                    }));
-                }
+                this.ws.send(JSON.stringify({
+                    name: this.player_nickname,
+                    type: 'PLAYER_QUIT_OFFLINE_GAME'
+                }));
 
                 this.$emit('updateGameView', 1);
             }
@@ -193,7 +192,7 @@ export default {
             if (this.game_data.current_status == 3) {
                 return;
             }
-            
+
             // 滚动鼠标滑轮可以旋转当前选中的棋子
             let current_pos = this.getCurrentBlock(event);
             let row = current_pos[0];
@@ -330,26 +329,6 @@ export default {
     border-radius: 10px;
     flex: 5;
     position: relative;
-}
-
-#nickname_input {
-    width: 60%;
-    padding-right: 8px;
-}
-
-#player-list {
-    width: 95%;
-    margin: 10px;
-}
-
-.input-with-select {
-    margin: 10px;
-    width: 95%;
-}
-
-#tip-content {
-    padding-top: 200px;
-    font-size: 16px;
 }
 
 #offline-game-canvas {
