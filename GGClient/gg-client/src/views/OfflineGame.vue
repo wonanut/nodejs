@@ -1,77 +1,19 @@
 <template>
 <div id="hall-view">
     <div id="hall-view-left">
-        <!-- 在游戏大厅(game_view=0)或者匹配界面(game_view=2)会显示该左侧边栏 -->
-        <div v-show="game_view != 1" id="hall-view-left-body">
-            <div id="hall-view-left-top">
-                <el-input v-model="nickname" class="input-with-select" :disabled=nickname_editable>
-                    <el-button slot="append" v-if="nickname_editable" @click="handleEdit()" icon="el-icon-edit"></el-button>
-                    <el-button slot="append" v-else @click="handleSubmitEdit()" icon="el-icon-check"></el-button>
-                </el-input>
-            </div>
-            <el-table :data="player_list" id="player-list">
-                <el-table-column label="玩家列表" :span="1">
-                    <template slot-scope="scope">
-                        <span>{{ scope.$index }}&nbsp;>&nbsp;{{ scope.row.name }}</span>
-                    </template>
-                </el-table-column>
-                <el-table-column label="状态" :span="1">
-                    <template slot-scope="scope">
-                        <el-tag size="mini">{{ scope.row.status }}</el-tag>
-                    </template>
-                </el-table-column>
-            </el-table>
-        </div>
-        <!-- 进入游戏状态(game_view=1)会显示该左侧栏 -->
-        <div v-show="game_view == 1" id="hall-view-left-body">
-            <el-table :data="game_data.player_infos" id="player-list" :row-class-name="tableRowClassName">
-                <el-table-column label="玩家昵称" :span="1">
-                    <template slot-scope="scope">
-                        <span>
-                            <div v-if="scope.row.idx == 0" style="color: rgb(255,0,0)">▊ {{ scope.row.name }}</div>
-                            <div v-else-if="scope.row.idx == 1" style="color: rgb(0,176,80)" >▊ {{ scope.row.name }}</div>
-                            <div v-else-if="scope.row.idx == 2" style="color: rgb(0,176,240)" >▊ {{ scope.row.name }}</div>
-                            <div v-else style="color: rgb(255,192,0)" >▊ {{ scope.row.name }}</div>
-                        </span>
-                    </template>
-                </el-table-column>
-                <el-table-column label="剩余方块" :span="1">
-                    <template slot-scope="scope">
-                        <span>{{ scope.row.remains }} blocks</span>
-                    </template>
-                </el-table-column>
-                <el-table-column label="状态" :span="1">
-                    <template slot-scope="scope">
-                        <span>
-                            <el-tag v-if="scope.row.status == 'inited'" >{{ scope.row.status }}</el-tag>
-                            <el-tag v-else-if="scope.row.status == 'normal'" type="success">{{ scope.row.status }}</el-tag>
-                            <el-tag v-else type="info" >{{ scope.row.status }}</el-tag>
-                        </span>
-                    </template>
-                </el-table-column>
-            </el-table>
-            <el-button id="give-up" @click="handleGiveup()" icon="el-icon-close" type="danger" round>认输</el-button>
-            <el-button id="give-up" @click="handleQuitOfflineGame()" icon="el-icon-upload2" type="success" round>离开</el-button>
+        <div id="hall-view-left-body">
+            <ScoreBoardComponent
+                :current_player="game_data.current_player"
+                :player_infos="game_data.player_infos"
+                :player_name="player_nickname"
+            />
+            <el-button id="give-up" @click="handleGiveup()" icon="el-icon-close" type="danger" :disabled="game_data.current_status == 3">认输(Giveup)</el-button>
+            <el-button id="give-up" @click="handleQuitOfflineGame()" icon="el-icon-upload2" type="success">离开游戏(Quit)</el-button>
         </div>
     </div>
     <div id="hall-view-right" ref="canvasWrapper">
-        <div v-show="game_view == 0" id="offline-game-tip">
-            <p id="tip-content">当前没有正在进行的游戏 你可以进入匹配队列等待其他联机队友 或者开始一场单机游戏</p>
-            <el-button type="primary" round size="normal" @click="handleStartOfflineGame">开始单机游戏</el-button>
-            <el-button type="success" round size="normal" @click="handleStartOnlineGame">加入匹配队列</el-button>
-        </div>
-        <canvas v-show="game_view == 1" id="offline-game-canvas" width="800" height="600" ref="myCanvas"></canvas>
-        <canvas v-show="game_view == 1" id="offline-game-canvas-float" width="800" height="600" ref=myCanvasFloat></canvas>
-        <div v-show="game_view == 2" id="matching-queue">
-            <p id="tip-content">正在匹配玩家中 请耐心等待</p>
-            <ul id="prepared-div">
-                <li v-for="item in prepare_list" :key="item">
-                    <el-avatar icon="el-icon-user-solid"></el-avatar>
-                    <p>{{ item }}</p>
-                </li>
-            </ul>
-            <el-button type="primary" round size="normal" @click="handleCancelPrepare">退出队列</el-button>
-        </div>
+        <canvas id="offline-game-canvas" width="800" height="600" ref="myCanvas"></canvas>
+        <canvas id="offline-game-canvas-float" width="800" height="600" ref=myCanvasFloat></canvas>
     </div>
 </div>
 </template>
@@ -81,14 +23,15 @@ const ele = require('element-ui')
 const ggl = require('@/js/gg.js')
 const can = require('@/js/canvas.js')
 
+import ScoreBoardComponent from '@/components/ScoreBoardComponent.vue'
+
 export default {
     name: "hall",
+    components: {
+        ScoreBoardComponent
+    },
     data() {
         return {
-            nickname_editable: true,
-            // 控制当前显示界面 0-大厅界面（初始值） 1-游戏界面 2-匹配界面
-            game_view: 0,
-            items: [1,2,3],
             canvas_config: {
                 canvas: null,
                 context: null,
@@ -106,8 +49,8 @@ export default {
                 map_row: 32,
                 map_col: 32,
                 chesses: null,
+                giveup_count: 0,
                 player_infos: [],
-                game_status: 0,
                 current_status: 0, // 0 表示没有选中棋子 1 表示已经选中棋子但还没有放置 2 表示已经放置棋子到棋盘上但是还没有点击确定 3 表示游戏结束
                 current_blocks_chess_type: 0,
                 current_blocks_prev_pos: [],
@@ -117,100 +60,70 @@ export default {
         }
     },
     props: {
-        nickname: {
+        player_nickname: {
             type: String,
-            defalut: "PLAYER_XXXX"
+            defaule: "PLAYER_offline"
         },
         ws: {
             type: WebSocket,
             default: null
         },
-        player_list: {
-            type: Array,
-            default: null
-        },
-        prepare_list: {
-            type: Array,
-            default: null
-        },
-        room_id: {
-            type: String,
-            default: null
-        },
-        room_player_list: {
-            type: Array,
-            default: null
+        game_status: {
+            type: Number,
+            default: 0
         }
     },
     mounted() {
-        //
-    },
-    methods: {
-        tableRowClassName({row, rowIndex}) {
-            if (row.idx === this.game_data.current_player) {
-                return 'success-row';
-            } else {
-                return '';
-            }
-        },
-        handleGiveup() {
-            if (this.game_data.player_infos[this.game_data.current_player].status == "finished") return;
-            this.game_data.player_infos[this.game_data.current_player].status = "failed";
-            this.gameLoop();
-        },
-        handleQuitOfflineGame() {
-            // 显示游戏大厅界面
-            this.game_view = 0
-            // 向服务器端发送开始离线游戏的消息
+        // 如果是登陆状态，向服务器端发送开始离线游戏的消息
+        if (this.game_status == 1) {
             this.ws.send(JSON.stringify({
-                name: this.nickname,
-                type: 'PLAYER_QUIT_OFFLINE_GAME'
-            }));
-        },
-        handleEdit() {
-            this.nickname_editable = false
-        },
-        handleSubmitEdit() {
-            this.nickname_editable = true
-        },
-        handleCancelPrepare() {
-            // 显示大厅界面
-            this.game_view = 0
-            // 向服务器端发送退出匹配队列的消息
-            this.ws.send(JSON.stringify({
-                name: this.nickname,
-                type: 'PLAYER_CANCEL_PREPARE'
-            }));
-        },
-        handleStartOnlineGame() {
-            // 显示匹配界面
-            this.game_view = 2
-            // 向服务器端发送进入匹配队列的消息
-            this.ws.send(JSON.stringify({
-                name: this.nickname,
-                type: 'PLAYER_PREPARE'
-            }));
-        },
-        handleStartOfflineGame() {
-            // 显示游戏界面
-            this.game_view = 1
-            // 向服务器端发送开始离线游戏的消息
-            this.ws.send(JSON.stringify({
-                name: this.nickname,
+                name: this.player_nickname,
                 type: 'PLAYER_START_OFFLINE_GAME'
             }));
+        }
+        
+        // 初始化游戏数据
+        this.initGame()
 
-            // 初始化游戏数据
-            this.initGame()
+        // 调用Canvas初始化游戏场景
+        this.initCanvas()
 
-            // 调用Canvas初始化游戏场景
-            this.initCanvas()
+        // 开始进入游戏循环
+        this.gameLoop()
+    },
+    methods: {
+        // 认输处理函数
+        handleGiveup() {
+            if (this.game_data.player_infos[this.game_data.current_player].status == "finished") {
+                return;
+            }
+            this.game_data.player_infos[this.game_data.current_player].status = "giveup";
+            this.game_data.giveup_count += 1;
 
-            // 开始进入游戏循环
-            this.gameLoop()
+            if (this.game_data.giveup_count == 4) {
+                this.game_data.current_status = 3;
+            }
+
+            this.gameLoop();
+        },
+        // 退出离线游戏处理函数
+        handleQuitOfflineGame() {
+            if (this.game_status == 1) {
+                // 向服务器端发送开始离线游戏的消息
+                this.ws.send(JSON.stringify({
+                    name: this.player_nickname,
+                    type: 'PLAYER_QUIT_OFFLINE_GAME'
+                }));
+
+                this.$emit('updateGameView', 1);
+            }
+            else {
+                this.$emit('updateGameView', 0);
+            }
+            
         },
         handleMouseMove(event) {
-            if (this.game_data.game_status == 1) {
+            if (this.game_data.current_status == 3) {
                 return;
             }
 
@@ -223,7 +136,7 @@ export default {
             }
         },
         handleMouseDown(event) {
-            if (this.game_data.game_status == 1) {
+            if (this.game_data.current_status == 3) {
                 return;
             }
 
@@ -276,9 +189,10 @@ export default {
             }
         },
         handleMouseWheel(event) {
-            if (this.game_data.game_status == 1) {
+            if (this.game_data.current_status == 3) {
                 return;
             }
+
             // 滚动鼠标滑轮可以旋转当前选中的棋子
             let current_pos = this.getCurrentBlock(event);
             let row = current_pos[0];
@@ -293,19 +207,22 @@ export default {
             this.game_data.current_status = 0;
             this.current_blocks_prev_pos = [];
             this.current_chess = null;
-
-            if (this.game_data.game_status == 1) {
+            
+            // 判断游戏是否已经结束
+            if (this.game_data.current_status == 3) {
                 ele.Notification.info("游戏结束");
+                return;
             }
+
             this.game_data.current_player = (this.game_data.current_player + 1) % 4;
             let cnt = 0;
-            while (this.game_data.player_infos[this.game_data.current_player].status == "failed") {
+            while (this.game_data.player_infos[this.game_data.current_player].status == "giveup") {
                 this.game_data.current_player = (this.game_data.current_player + 1) % 4;
                 cnt += 1;
                 if (cnt == 4) break;
             }
             if (cnt == 4) {
-                this.game_data.game_status = 1;
+                this.game_data.current_status = 3;
                 ele.Notification.info("游戏结束");
             }
             else {
@@ -365,8 +282,8 @@ export default {
             this.game_data.player_infos = ggl.initPlayerInfo();
             this.game_data.current_player = 3;
             this.game_data.current_chess = null;
-            this.game_data.game_status = 0;
             this.game_data.current_status = 0;
+            this.game_data.giveup_count = 0;
             this.current_blocks_prev_pos = [];
             this.current_chess = null;
 
@@ -381,16 +298,12 @@ export default {
 
 <style scoped>
 
-@font-face {
-    font-family: Camicakan;
-    src: url('../font/Camicakan.otf');
-}
-
 #hall-view {
     width: 100%;
     height: 100%;
     text-align: center;
     display: flex;
+    overflow: hidden;
 }
 
 #hall-view-left {
@@ -418,32 +331,7 @@ export default {
     position: relative;
 }
 
-#hall-view-left-top {
-    /* padding-top: 5px; */
-}
-
-#nickname_input {
-    width: 60%;
-    padding-right: 8px;
-}
-
-#player-list {
-    width: 95%;
-    margin: 10px;
-}
-
-.input-with-select {
-    margin: 10px;
-    width: 95%;
-}
-
-#tip-content {
-    padding-top: 200px;
-    font-size: 16px;
-}
-
 #offline-game-canvas {
-    /* background-color: #fafafa; */
     position: absolute;
     left: 0;
     top: 0;
@@ -457,30 +345,7 @@ export default {
     z-index: 10;
 }
 
-.el-table >>> .success-row {
-    background: rgb(253,245,230);
-    font-weight: bold;
-}
-
 #give-up {
     margin-top: 10%;
-}
-
-#prepared-div {
-    border-radius: 10px;
-    width: wrap;
-    display: flex;
-    justify-content: center;
-    padding: 0px;
-}
-
-#prepared-div li {
-    list-style: none;
-    background-color: ghostwhite;
-    margin-left: 20px;
-    font-size: 10px;
-    margin: 10px;
-    padding: 20px;
-    padding-bottom: 10px;
 }
 </style>

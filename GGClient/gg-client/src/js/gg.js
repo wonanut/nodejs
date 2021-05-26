@@ -378,7 +378,7 @@ const player_region_conf = [{
 }]
 
 // 初始化玩家信息函数
-export function initPlayerInfo() {
+export function initPlayerInfo(player_list = null) {
     var player_infos = [];
     for (let i = 0; i < 4; i++) {
         let regions = {
@@ -387,7 +387,13 @@ export function initPlayerInfo() {
             width: player_region_conf[i].width,
             height: player_region_conf[i].height,
         }
-        let player = new Player(i, "player_" + i, regions, player_region_conf[i].empty_block, player_region_conf[i].start_block, 89, 'inited');
+        let player;
+        if (player_list == null) {
+            player = new Player(i, "player_" + i, regions, player_region_conf[i].empty_block, player_region_conf[i].start_block, 89, 'inited');
+        }
+        else {
+            player = new Player(i, player_list[i], regions, player_region_conf[i].empty_block, player_region_conf[i].start_block, 89, 'inited');
+        }
         player_infos.push(player);
     }
     return player_infos;
