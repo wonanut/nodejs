@@ -71,7 +71,6 @@ export default {
             // 下面的参数是和在线游戏的房间有关的数据
             room_player_list: [],
             room_id: null,
-            current_player: null,
             operation: null
         }
     },

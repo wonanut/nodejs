@@ -175,16 +175,18 @@ var server = ws.createServer(function(conn) {
                 break;
             
             case 'PLAYER_OPERATION_ONLINE_GAME':
+                var current_player_idx = Object.keys(online_rooms[conn.room_id]["conns"]).indexOf(conn.nickname);
                 switch(data.operation) {
                     case 'GIVEUP':
                         multicast(
-                            online_rooms[conn.room_id],
+                            online_rooms[conn.room_id]["conns"],
                             JSON.stringify({
                                 type: 'SERVER_MULTICAST_GIVEUP_ONLINE_GAME',
                                 operation: {
-                                    player_idx: Object.keys(online_rooms[conn.room_id]).indexOf(conn.nickname),
+                                    player_idx: current_player_idx,
                                     type: "status_changed",
-                                    value: "giveup"
+                                    new_status: "giveup",
+                                    next_player_idx = __getNextPlayerIndex(online_rooms[conn.room_id]["config"], current_player_idx)
                                 }
                         }));
                         break;
@@ -232,14 +234,14 @@ function broadcast(str) {
 }
 
 // 定义组播函数 服务器可以使用该函数向指定客户端群体发送消息
-function multicast(queue, str) {
-    for (var name in queue) {
-        let conn = queue[name];
+function multicast(member, str) {
+    for (var name in member) {
+        let conn = member[name];
         try {
             conn.sendText(str);
         } catch (error) {
             console.error("Error while connecting to " + name);
-            delete queue[name];
+            delete member[name];
         }
     }
 }
@@ -337,4 +339,10 @@ function __initRoomConfiguration(player_list) {
         player_infos.push(item);
     }
     return player_infos;
+}
+
+// 内部函数，用于获取下一个进行游戏操作的玩家编号
+function __getNextPlayerIndex(player_infos, giveup_player_idx) {
+    // if (giveup_player_idx )
+    return 0;
 }
