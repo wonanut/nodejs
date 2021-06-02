@@ -12,8 +12,8 @@
             </div>
         </div>
         <div id="online-view-right" ref="canvasWrapper">
-            <canvas id="offline-game-canvas" width="800" height="600" ref="myCanvas"></canvas>
-            <canvas id="offline-game-canvas-float" width="800" height="600" ref=myCanvasFloat></canvas>
+            <canvas id="online-game-canvas" width="800" height="600" ref="myCanvas"></canvas>
+            <canvas id="online-game-canvas-float" width="800" height="600" ref=myCanvasFloat></canvas>
         </div>
     </div>
 </template>
@@ -51,18 +51,19 @@ export default {
                 chesses: null,
                 giveup_count: 0,
                 player_infos: [],
+                my_idx: null,
                 current_status: 0, // 0 表示没有选中棋子 1 表示已经选中棋子但还没有放置 2 表示已经放置棋子到棋盘上但是还没有点击确定 3 表示游戏结束
                 current_blocks_chess_type: 0,
                 current_blocks_prev_pos: [],
+                current_player: null,
                 current_chess: null,
-                current_player: 3
             }
         }
     },
     props: {
         player_nickname: {
             type: String,
-            defaule: "Player_offline"
+            defaule: "Player_online"
         },
         ws: {
             type: WebSocket,
@@ -75,10 +76,25 @@ export default {
         room_id: {
             type: String,
             default: null
+        },
+        operation: {
+            type: Object,
+            default: null
         }
     },
-    computed: {
-
+    watch: {
+        operation: {
+            handler(old_value, new_value) {
+                switch(new_value.type) {
+                    case "update_player":
+                        this.game_data.current_player = parseInt(new_value.current_player);
+                        break;
+                    default:
+                        break;
+                }
+            },
+            deep: true
+        }
     },
     mounted() {
         this.ws.send(JSON.stringify({
@@ -103,7 +119,7 @@ export default {
             // 初始化其他相关内容
             this.game_data.chesses = ggl.chesses;
             this.game_data.player_infos = ggl.initPlayerInfo(this.room_player_list);
-            this.game_data.current_player = 3;
+            this.game_data.my_idx = this.room_player_list.indexOf(this.player_nickname);
             this.game_data.current_chess = null;
             this.game_data.current_status = 0;
             this.game_data.giveup_count = 0;
@@ -120,14 +136,12 @@ export default {
             if (this.game_data.player_infos[this.game_data.current_player].status == "finished") {
                 return;
             }
-            this.game_data.player_infos[this.game_data.current_player].status = "giveup";
-            this.game_data.giveup_count += 1;
-
-            if (this.game_data.giveup_count == 4) {
-                this.game_data.current_status = 3;
-            }
-
-            this.gameLoop();
+            
+            this.ws.send(JSON.stringify({
+                name: this.player_nickname,
+                type: 'PLAYER_OPERATION_ONLINE_GAME',
+                operation: 'GIVEUP',
+            }));
         },
         // 退出游戏处理函数
         handleQuitOnlineGame() {
@@ -140,7 +154,7 @@ export default {
             this.$emit('updateGameView', 1);
         },
         handleMouseMove(event) {
-            if (this.game_data.current_status == 3) {
+            if (this.game_data.current_status == 3 || this.game_data.my_idx != this.game_data.current_player) {
                 return;
             }
 
@@ -153,7 +167,7 @@ export default {
             }
         },
         handleMouseDown(event) {
-            if (this.game_data.current_status == 3) {
+            if (this.game_data.current_status == 3 || this.game_data.my_idx != this.game_data.current_player) {
                 return;
             }
 
@@ -173,7 +187,7 @@ export default {
                 // 这里的判断逻辑比较复复杂，详细的规则可以看ggl.checkLegalPosition函数实现
                 if (this.game_data.current_status == 1 && ggl.checkLegalPosition(this.game_data, row, col)) {
                     ggl.putChess(this.game_data, row, col);
-                    this.game_data.player_infos[this.game_data.current_player].remains -= this.game_data.current_chess.blocks;
+                    this.game_data.player_infos[this.game_data.game_data.current_player].remains -= this.game_data.current_chess.blocks;
                     // 如果某个玩家已经用完所有的棋子，将其状态更改为finished
                     if (this.game_data.player_infos[this.game_data.current_player].remains == 0) {
                         this.game_data.player_infos[this.game_data.current_player].status = "finished";
@@ -206,7 +220,7 @@ export default {
             }
         },
         handleMouseWheel(event) {
-            if (this.game_data.current_status == 3) {
+            if (this.game_data.current_status == 3 || this.game_data.my_idx != this.game_data.current_player) {
                 return;
             }
             
@@ -328,5 +342,19 @@ export default {
 
 #give-up {
     margin-top: 10%;
+}
+
+#online-game-canvas {
+    position: absolute;
+    left: 0;
+    top: 0;
+}
+
+#online-game-canvas-float {
+    background:rgba(255,255,255,0);
+    position: absolute;
+    left: 0;
+    top: 0;
+    z-index: 10;
 }
 </style>
