@@ -159,7 +159,7 @@ var server = ws.createServer(function(conn) {
                 multicast(
                     online_rooms[conn.room_id],
                     JSON.stringify({
-                        type: 'SERVER_MULTICAST_QUIT_ONLINE_ROOM',
+                        type: 'SERVER_MULTICAST_QUIT_ONLINE_GAME',
                         player_nickname: conn.name,
                         message: "quit"
                 }));
@@ -168,40 +168,39 @@ var server = ws.createServer(function(conn) {
                 // 广播更新该玩家的游戏状态
                 conn.status = PlayerStatus.ONHALL;
                 broadcast(JSON.stringify({
-                    type: 'SERVER_BROADCAST_QUIT_ONLINE_ROOM',
+                    type: 'SERVER_BROADCAST_QUIT_ONLINE_GAME',
                     player_list: getAllPlayerName()
                 }));
 
                 break;
             
-            case 'PLAYER_GIVEUP_ONLINE_GAME':
-                multicast(
-                    online_rooms[conn.room_id],
-                    JSON.stringify({
-                        type: 'SERVER_MULTICAST_GIVEUP_ONLINE_ROOM',
-                        player_nickname: player_nickname,
-                        message: "giveup"
-                }));
-                break;
-
             case 'PLAYER_OPERATION_ONLINE_GAME':
-                break;
+                var current_player_idx = Object.keys(online_rooms[conn.room_id]["conns"]).indexOf(conn.nickname);
+                switch(data.operation) {
+                    case 'GIVEUP':
+                        multicast(
+                            online_rooms[conn.room_id]["conns"],
+                            JSON.stringify({
+                                type: 'SERVER_MULTICAST_GIVEUP_ONLINE_GAME',
+                                operation: {
+                                    player_idx: current_player_idx,
+                                    type: "status_changed",
+                                    new_status: "giveup",
+                                    next_player_idx = __getNextPlayerIndex(online_rooms[conn.room_id]["config"], current_player_idx)
+                                }
+                        }));
+                        break;
+                    
+                    case 'UPDATE':
+                        multicast(
+                            online_rooms[conn.room_id],
+                            JSON.stringify({
+                                type: 'SERVER_MULTICAST_UPDATE_ONLINE_GAME',
+                                operation: {
 
-            case 'ROOM_UPDATE':
-                let room_id = data.room_id;
-                let player_nickname = data.player_nickname;
-                let operation_type = data.operation_type;
-
-                multicast(
-                    online_rooms[room_id],
-                    JSON.stringify({
-                        type: 'SERVER_MULTICAST_OPERATION',
-                        player_nickname: player_nickname,
-                        message: "TEST"
-                    })
-                )
-
-                switch(operation_type) {
+                                }
+                        }));
+                        break;
                     default:
                         break;
                 }
@@ -235,14 +234,14 @@ function broadcast(str) {
 }
 
 // 定义组播函数 服务器可以使用该函数向指定客户端群体发送消息
-function multicast(queue, str) {
-    for (var name in queue) {
-        let conn = queue[name];
+function multicast(member, str) {
+    for (var name in member) {
+        let conn = member[name];
         try {
             conn.sendText(str);
         } catch (error) {
             console.error("Error while connecting to " + name);
-            delete queue[name];
+            delete member[name];
         }
     }
 }
@@ -340,4 +339,10 @@ function __initRoomConfiguration(player_list) {
         player_infos.push(item);
     }
     return player_infos;
+}
+
+// 内部函数，用于获取下一个进行游戏操作的玩家编号
+function __getNextPlayerIndex(player_infos, giveup_player_idx) {
+    // if (giveup_player_idx )
+    return 0;
 }

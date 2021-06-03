@@ -34,6 +34,8 @@
         :ws="ws"
         :room_player_list="room_player_list"
         :room_id="room_id"
+        :operation="operation"
+        @updateGameView="handleUpdateGameView"
     />
 </div>
 </template>
@@ -66,9 +68,10 @@ export default {
             game_view: 0,
             player_list: [],
             prepare_list: [],
-            // room_player_list 和 room_id 是和在线游戏的房间有关的数据
+            // 下面的参数是和在线游戏的房间有关的数据
             room_player_list: [],
-            room_id: null
+            room_id: null,
+            operation: null
         }
     },
     destroyed() {
@@ -119,7 +122,15 @@ export default {
                 case 'SERVER_MULTICAST_CREATE_ROOM':
                     this.room_player_list = data.player_list;
                     this.room_id = data.room_id;
+                    this.operation = {
+                        player_nickname: this.player_nickname,
+                        type: "update_player",
+                        current_player_idx: 0
+                    }
                     this.game_view = 4;
+                    break;
+                case 'SERVER_MULTICAST_GIVEUP_ONLINE_GAME':
+                    this.operation = data.operation;
                     break;
                 default:
                     break;
