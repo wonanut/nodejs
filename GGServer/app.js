@@ -190,7 +190,7 @@ var server = ws.createServer(function(conn) {
                                         player_idx: current_player_idx,
                                         type: "change_status",
                                         new_status: "giveup",
-                                        next_player_idx = __getNextPlayerIndex(online_rooms[conn.room_id]["config"], data.current_player_idx, current_player_idx)
+                                        next_player_idx: __getNextPlayerIndex(online_rooms[conn.room_id]["config"], data.current_player_idx, current_player_idx)
                                     }
                             }));
                         }
@@ -198,8 +198,9 @@ var server = ws.createServer(function(conn) {
                     
                     // 放置棋子更新
                     case 'UPDATE':
+                        console.log(data);
                         multicast(
-                            online_rooms[conn.room_id],
+                            online_rooms[conn.room_id]["conns"],
                             JSON.stringify({
                                 type: 'SERVER_MULTICAST_UPDATE_ONLINE_GAME',
                                 operation: {
@@ -207,7 +208,7 @@ var server = ws.createServer(function(conn) {
                                     type: "game_operation",
                                     blocks: data.blocks,
                                     new_status: __getPlayerStatus(online_rooms[conn.room_id]["config"], current_player_idx),
-                                    next_player_idx = __getNextPlayerIndex(online_rooms[conn.room_id]["config"], current_player_idx, -1)
+                                    next_player_idx: __getNextPlayerIndex(online_rooms[conn.room_id]["config"], current_player_idx, -1)
                                 }
                         }));
                         break;
@@ -356,15 +357,22 @@ function __initRoomConfiguration(player_list) {
 // current_player_idx: 当前正在操作游戏的玩家index
 // giveup_player_idx: giveup操作玩家index, 该参数为-1表示不是giveup操作调用
 // 返回值：返回-1表示没有玩家可以再进行操作
-function __getNextPlayerIndex(player_infos, current_player_idx, giveup_player_idx) {
+function __getNextPlayerIndex(player_infos, current_player_idx, giveup_player_idx = -1) {
     // 如果当前的放弃玩家和当前正在游戏的玩家不是同一个人，当前正在游戏玩家不变
-    if (giveup_player_idx != current_player_idx) {
+    if (giveup_player_idx != -1 && giveup_player_idx != current_player_idx) {
         return current_player_idx;
     }
 
     let count = 0;
+    let player_idx = current_player_idx;
     while (count < 4) {
-
+        player_idx = (player_idx + 1) % 4;
+        if (player_infos[player_idx]["status"] == "normal" || player_infos[player_idx]["status"] == "inited") {
+            return player_idx;
+        }
+        else {
+            count += 1;
+        }
     }
     return -1;
 }

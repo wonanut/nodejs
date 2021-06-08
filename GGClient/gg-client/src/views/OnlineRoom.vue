@@ -90,6 +90,14 @@ export default {
                         break;
                     case 'change_status':
                         this.game_data.player_infos[parseInt(new_value.player_idx)].status = new_value.new_status;
+                        let next_player_idx = parseInt(new_value.next_player_idx);
+                        if (next_player_idx == -1) {
+                            ele.Notification.info("游戏结束");
+                            this.game_data.current_status = 3;
+                        }
+                        else {
+                            this.game_data.current_player = next_player_idx;
+                        }
                         break;
                     case 'game_operation':
                         // TODO
@@ -170,6 +178,10 @@ export default {
         // 认输处理函数
         handleGiveup() {
             if (this.game_data.player_infos[this.game_data.my_idx].status == "finished") {
+                return;
+            }
+
+            if (this.game_data.current_status == 3) {
                 return;
             }
             
