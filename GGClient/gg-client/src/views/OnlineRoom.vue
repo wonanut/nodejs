@@ -88,8 +88,11 @@ export default {
                     case "update_player":
                         this.game_data.current_player = parseInt(new_value.current_player_idx);
                         break;
-                    case 'status_changed':
+                    case 'change_status':
                         this.game_data.player_infos[parseInt(new_value.player_idx)].status = new_value.new_status;
+                        break;
+                    case 'game_operation':
+                        // TODO
                         break;
                     default:
                         break;
@@ -166,7 +169,7 @@ export default {
         },
         // 认输处理函数
         handleGiveup() {
-            if (this.game_data.player_infos[this.game_data.current_player].status == "finished") {
+            if (this.game_data.player_infos[this.game_data.my_idx].status == "finished") {
                 return;
             }
             
@@ -174,6 +177,7 @@ export default {
                 name: this.player_nickname,
                 type: 'PLAYER_OPERATION_ONLINE_GAME',
                 operation: 'GIVEUP',
+                current_player_idx: this.game_data.current_player
             }));
         },
         // 退出游戏处理函数
@@ -219,16 +223,13 @@ export default {
                 // 如果当前位置可以放置棋子，而且当前的current_status为1，检查是否能够在当前位置放置棋子
                 // 这里的判断逻辑比较复复杂，详细的规则可以看ggl.checkLegalPosition函数实现
                 if (this.game_data.current_status == 1 && ggl.checkLegalPosition(this.game_data, row, col)) {
-                    ggl.putChess(this.game_data, row, col);
-                    this.game_data.player_infos[this.game_data.game_data.current_player].remains -= this.game_data.current_chess.blocks;
-                    // 如果某个玩家已经用完所有的棋子，将其状态更改为finished
-                    if (this.game_data.player_infos[this.game_data.current_player].remains == 0) {
-                        this.game_data.player_infos[this.game_data.current_player].status = "finished";
-                        ele.Notification.success("玩家 " + this.game_data.player_infos[this.game_data.current_player].name + "已经完成游戏!");
-                    }
-                    this.game_data.current_status = 0;
-                    this.game_data.current_chess = null;
-                    this.gameLoop();
+                    // MAIN
+                    this.ws.send(JSON.stringify({
+                        name: this.player_nickname,
+                        type: 'PLAYER_OPERATION_ONLINE_GAME',
+                        operation: 'UPDATE',
+                        blocks: this.game_data.current_chess
+                    }));
                 }
                 // 当前玩家有效区域
                 else if (ggl.checkCurrentPlayerRegion(this.game_data, row, col)) {

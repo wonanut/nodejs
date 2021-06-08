@@ -174,30 +174,40 @@ var server = ws.createServer(function(conn) {
 
                 break;
             
+            // 在线房间中的所有操作
             case 'PLAYER_OPERATION_ONLINE_GAME':
                 var current_player_idx = Object.keys(online_rooms[conn.room_id]["conns"]).indexOf(conn.nickname);
                 switch(data.operation) {
+                    // 放弃游戏
                     case 'GIVEUP':
-                        multicast(
-                            online_rooms[conn.room_id]["conns"],
-                            JSON.stringify({
-                                type: 'SERVER_MULTICAST_GIVEUP_ONLINE_GAME',
-                                operation: {
-                                    player_idx: current_player_idx,
-                                    type: "status_changed",
-                                    new_status: "giveup",
-                                    next_player_idx = __getNextPlayerIndex(online_rooms[conn.room_id]["config"], current_player_idx)
-                                }
-                        }));
+                        if (online_rooms[conn.room_id]["config"][current_player_idx]["status"] != "giveup") {
+                            online_rooms[conn.room_id]["config"][current_player_idx]["status"] = "giveup";
+                            multicast(
+                                online_rooms[conn.room_id]["conns"],
+                                JSON.stringify({
+                                    type: 'SERVER_MULTICAST_GIVEUP_ONLINE_GAME',
+                                    operation: {
+                                        player_idx: current_player_idx,
+                                        type: "change_status",
+                                        new_status: "giveup",
+                                        next_player_idx = __getNextPlayerIndex(online_rooms[conn.room_id]["config"], data.current_player_idx, current_player_idx)
+                                    }
+                            }));
+                        }
                         break;
                     
+                    // 放置棋子更新
                     case 'UPDATE':
                         multicast(
                             online_rooms[conn.room_id],
                             JSON.stringify({
                                 type: 'SERVER_MULTICAST_UPDATE_ONLINE_GAME',
                                 operation: {
-
+                                    player_idx: current_player_idx,
+                                    type: "game_operation",
+                                    blocks: data.blocks,
+                                    new_status: __getPlayerStatus(online_rooms[conn.room_id]["config"], current_player_idx),
+                                    next_player_idx = __getNextPlayerIndex(online_rooms[conn.room_id]["config"], current_player_idx, -1)
                                 }
                         }));
                         break;
@@ -342,7 +352,27 @@ function __initRoomConfiguration(player_list) {
 }
 
 // 内部函数，用于获取下一个进行游戏操作的玩家编号
-function __getNextPlayerIndex(player_infos, giveup_player_idx) {
-    // if (giveup_player_idx )
-    return 0;
+// player_infos: 房间中玩家列表
+// current_player_idx: 当前正在操作游戏的玩家index
+// giveup_player_idx: giveup操作玩家index, 该参数为-1表示不是giveup操作调用
+// 返回值：返回-1表示没有玩家可以再进行操作
+function __getNextPlayerIndex(player_infos, current_player_idx, giveup_player_idx) {
+    // 如果当前的放弃玩家和当前正在游戏的玩家不是同一个人，当前正在游戏玩家不变
+    if (giveup_player_idx != current_player_idx) {
+        return current_player_idx;
+    }
+
+    let count = 0;
+    while (count < 4) {
+
+    }
+    return -1;
+}
+
+// 内部函数，用于更新玩家的状态
+function __getPlayerStatus(player_infos, player_idx) {
+    if (player_infos[player_idx]["status"] == "inited") {
+        return "normal";
+    }
+    return player_infos[player_idx]["status"];
 }
