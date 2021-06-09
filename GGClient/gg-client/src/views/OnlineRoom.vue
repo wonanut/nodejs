@@ -88,6 +88,12 @@ export default {
                 switch(new_value.type) {
                     case "update_player":
                         this.game_data.current_player = parseInt(new_value.current_player_idx);
+                        if (this.game_data.my_idx != this.game_data.current_player) {
+                            ele.Notification.success("现在轮到" + this.game_data.current_player + "号玩家" + this.room_player_list[this.game_data.current_player] + "操作");
+                        }
+                        else {
+                            ele.Notification.success("现在轮到你操作");
+                        }
                         break;
                     case 'change_status':
                         this.game_data.player_infos[parseInt(new_value.player_idx)].status = new_value.new_status;
@@ -98,6 +104,12 @@ export default {
                         }
                         else {
                             this.game_data.current_player = next_player_idx;
+                            if (next_player_idx != this.game_data.my_idx) {
+                                ele.Notification.success("现在轮到" + next_player_idx + "号玩家" + this.room_player_list[next_player_idx] + "操作");
+                            }
+                            else {
+                                ele.Notification.success("现在轮到你操作");
+                            }
                         }
                         break;
                     case 'game_operation':
@@ -106,6 +118,7 @@ export default {
                         this.game_data.player_infos[parseInt(new_value.player_idx)].status = new_value.new_status;
                         this.game_data.current_chess = new_value.blocks;
                         this.game_data.current_blocks_chess_type = new_value.current_blocks_chess_type;
+                        this.game_data.player_infos[new_value.player_idx].remains -= this.game_data.current_chess.blocks;
                         
                         ggl.putChess(this.game_data, start_position[0], start_position[1]);
                         
@@ -115,6 +128,12 @@ export default {
                         }
                         else {
                             this.game_data.current_player = next_player_idx;
+                            if (next_player_idx != this.game_data.my_idx) {
+                                ele.Notification.success("现在轮到" + next_player_idx + "号玩家" + this.room_player_list[next_player_idx] + "操作");
+                            }
+                            else {
+                                ele.Notification.success("现在轮到你操作");
+                            }
                         }
 
                         can.canvasDrawMap(this.canvas_config, this.game_data.map["map"]);
@@ -217,6 +236,7 @@ export default {
             // 向服务器端发送开始离线游戏的消息
             this.ws.send(JSON.stringify({
                 name: this.player_nickname,
+                current_player_idx: this.game_data.current_player,
                 type: 'PLAYER_QUIT_ONLINE_GAME'
             }));
 

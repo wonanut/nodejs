@@ -95,6 +95,7 @@ export default {
         // 接受消息处理函数
         wsOnMessage(e) {
             var data = JSON.parse(e.data);
+            console.log(data);
             switch(data.type) {
                 case 'SERVER_LOGINSTATUS':
                     if (data.message == 'success') {
@@ -130,6 +131,7 @@ export default {
                     break;
                 case 'SERVER_MULTICAST_GIVEUP_ONLINE_GAME':
                 case 'SERVER_MULTICAST_UPDATE_ONLINE_GAME':
+                case 'SERVER_MULTICAST_QUIT_ONLINE_GAME':
                     this.operation = data.operation;
                     break;
                 default:

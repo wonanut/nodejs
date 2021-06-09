@@ -42,7 +42,7 @@ var server = ws.createServer(function(conn) {
     // 处理服务器端接收的消息
     conn.on('text', function(json) {
         var data = JSON.parse(json)
-        console.log(data.name + ': ' + data.type);
+        console.log('[' + server.connections.length + '] ' + data.name + ': ' + data.type);
         switch (data.type) {
             // 用户登陆
             case 'PLAYER_LOGIN':
@@ -156,13 +156,21 @@ var server = ws.createServer(function(conn) {
             
             case 'PLAYER_QUIT_ONLINE_GAME':
                 // 组播该玩家在游戏房间中的游戏状态
+                var current_player_idx = Object.keys(online_rooms[conn.room_id]["conns"]).indexOf(conn.nickname);
+                online_rooms[conn.room_id]["config"][current_player_idx]["status"] = "quit";
+                
                 multicast(
-                    online_rooms[conn.room_id],
+                    online_rooms[conn.room_id]["conns"],
                     JSON.stringify({
                         type: 'SERVER_MULTICAST_QUIT_ONLINE_GAME',
-                        player_nickname: conn.name,
-                        message: "quit"
+                        operation: {
+                            type: "change_status",
+                            player_idx: current_player_idx,
+                            new_status: "quit",
+                            next_player_idx: __getNextPlayerIndex(online_rooms[conn.room_id]["config"], data.current_player_idx, current_player_idx)
+                        }
                 }));
+                
                 conn.room_id = null;
 
                 // 广播更新该玩家的游戏状态
@@ -187,8 +195,8 @@ var server = ws.createServer(function(conn) {
                                 JSON.stringify({
                                     type: 'SERVER_MULTICAST_GIVEUP_ONLINE_GAME',
                                     operation: {
-                                        player_idx: current_player_idx,
                                         type: "change_status",
+                                        player_idx: current_player_idx,
                                         new_status: "giveup",
                                         next_player_idx: __getNextPlayerIndex(online_rooms[conn.room_id]["config"], data.current_player_idx, current_player_idx)
                                     }
@@ -250,7 +258,9 @@ function multicast(member, str) {
     for (var name in member) {
         let conn = member[name];
         try {
-            conn.sendText(str);
+            if (conn.status != "quit") {
+                conn.sendText(str);
+            }
         } catch (error) {
             console.error("Error while connecting to " + name);
             delete member[name];
