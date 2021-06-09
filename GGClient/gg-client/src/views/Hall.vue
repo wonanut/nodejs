@@ -14,10 +14,12 @@
         </div>
     </div>
     <div id="hall-view-right" ref="canvasWrapper">
-        <div id="offline-game-tip">
-            <p id="tip-content">当前没有正在进行的游戏 你可以进入匹配队列等待其他联机队友 或者开始一场单机游戏</p>
+        <div id="hall-tip">
+            <p id="title">GridGame Online (v1.0)</p>
+            <p id="tip-content">当前没有正在进行的游戏 你可以进入匹配队列等待其他联机队友 或者立即开始一场单机游戏</p>
             <el-button type="primary" round size="normal" @click="handleStartOfflineGame">开始单机游戏</el-button>
-            <el-button type="success" round size="normal" @click="handleStartOnlineGame">加入匹配队列</el-button>
+            <el-button type="success" round size="normal" @click="handleStartOnlineGame" :disabled=true>匹配2人游戏</el-button>
+            <el-button type="success" round size="normal" @click="handleStartOnlineGame">匹配4人游戏</el-button>
         </div>
     </div>
 </div>
@@ -68,7 +70,6 @@ export default {
 </script>
 
 <style scoped>
-
 @font-face {
     font-family: Camicakan;
     src: url('../font/Camicakan.otf');
@@ -116,8 +117,21 @@ export default {
     width: 95%;
 }
 
-#tip-content {
+#hall-tip {
     padding-top: 200px;
+}
+
+#tip-content {
     font-size: 16px;
+    color: gray;
+    padding-bottom: 30px;
+}
+
+#title {
+    font-family: Camicakan;
+    font-size: 45px;
+    margin-top: 5px;
+    margin-bottom: 0px;
+    color: rgb(62, 126, 30);
 }
 </style>

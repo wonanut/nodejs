@@ -95,7 +95,6 @@ export default {
         // 接受消息处理函数
         wsOnMessage(e) {
             var data = JSON.parse(e.data);
-            console.log(data);
             switch(data.type) {
                 case 'SERVER_LOGINSTATUS':
                     if (data.message == 'success') {
@@ -106,7 +105,7 @@ export default {
                     break;
                 case 'SERVER_BROADCAST_ALL':
                     this.player_list = data.player_list;
-                    ele.Notification.success("欢迎新玩家进入GG游戏大厅");
+                    ele.Notification.success(data.message);
                     break;
                 case 'SERVER_BROADCAST_NEW_PREPARE':
                 case 'SERVER_BROADCAST_CANCEL_PREPARE':

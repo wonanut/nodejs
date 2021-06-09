@@ -235,7 +235,8 @@ var server = ws.createServer(function(conn) {
     conn.on('close', function() {
         broadcast(JSON.stringify({
             type: 'SERVER_BROADCAST_ALL',
-            message: conn.nickname + '离开游戏'
+            message: conn.nickname + '离开游戏',
+            player_list: getAllPlayerName()
         }));
     });
     
