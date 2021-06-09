@@ -84,13 +84,14 @@ export default {
     watch: {
         operation: {
             handler(new_value, old_value) {
+                let next_player_idx;
                 switch(new_value.type) {
                     case "update_player":
                         this.game_data.current_player = parseInt(new_value.current_player_idx);
                         break;
                     case 'change_status':
                         this.game_data.player_infos[parseInt(new_value.player_idx)].status = new_value.new_status;
-                        let next_player_idx = parseInt(new_value.next_player_idx);
+                        next_player_idx = parseInt(new_value.next_player_idx);
                         if (next_player_idx == -1) {
                             ele.Notification.info("游戏结束");
                             this.game_data.current_status = 3;
@@ -100,7 +101,26 @@ export default {
                         }
                         break;
                     case 'game_operation':
-                        // TODO
+                        next_player_idx = parseInt(new_value.next_player_idx);
+                        var start_position = new_value.start_position;
+                        this.game_data.player_infos[parseInt(new_value.player_idx)].status = new_value.new_status;
+                        this.game_data.current_chess = new_value.blocks;
+                        this.game_data.current_blocks_chess_type = new_value.current_blocks_chess_type;
+                        
+                        ggl.putChess(this.game_data, start_position[0], start_position[1]);
+                        
+                        if (next_player_idx == -1) {
+                            ele.Notification.info("游戏结束");
+                            this.game_data.current_status = 3;
+                        }
+                        else {
+                            this.game_data.current_player = next_player_idx;
+                        }
+
+                        can.canvasDrawMap(this.canvas_config, this.game_data.map["map"]);
+                        this.game_data.current_status = 0;
+                        this.game_data.current_chess = null;
+
                         break;
                     default:
                         break;
@@ -177,7 +197,7 @@ export default {
         },
         // 认输处理函数
         handleGiveup() {
-            if (this.game_data.player_infos[this.game_data.my_idx].status == "finished") {
+            if (this.game_data.player_infos[this.game_data.my_idx].status == "finished" || this.game_data.player_infos[this.game_data.my_idx].status == "giveup") {
                 return;
             }
 
@@ -240,6 +260,8 @@ export default {
                         name: this.player_nickname,
                         type: 'PLAYER_OPERATION_ONLINE_GAME',
                         operation: 'UPDATE',
+                        start_position: [row, col],
+                        chess_type: this.game_data.current_blocks_chess_type,
                         blocks: this.game_data.current_chess
                     }));
                 }

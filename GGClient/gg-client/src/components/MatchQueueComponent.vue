@@ -28,9 +28,6 @@ export default {
             default: null
         }
     },
-    mounted: {
-        
-    },
     methods: {
         handleCancelPrepare() {
             // 向服务器端发送退出匹配队列的消息

@@ -26,10 +26,6 @@ export default {
             type: WebSocket,
             default: null
         },
-        player_list: {
-            type: Array,
-            default: null
-        },
         prepare_list: {
             type: Array,
             default: null

@@ -198,7 +198,6 @@ var server = ws.createServer(function(conn) {
                     
                     // 放置棋子更新
                     case 'UPDATE':
-                        console.log(data);
                         multicast(
                             online_rooms[conn.room_id]["conns"],
                             JSON.stringify({
@@ -207,6 +206,8 @@ var server = ws.createServer(function(conn) {
                                     player_idx: current_player_idx,
                                     type: "game_operation",
                                     blocks: data.blocks,
+                                    start_position: data.start_position,
+                                    chess_type: data.chess_type,
                                     new_status: __getPlayerStatus(online_rooms[conn.room_id]["config"], current_player_idx),
                                     next_player_idx: __getNextPlayerIndex(online_rooms[conn.room_id]["config"], current_player_idx, -1)
                                 }

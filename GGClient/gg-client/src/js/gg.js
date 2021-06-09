@@ -562,6 +562,8 @@ export function putChess(game_data, start_row, start_col) {
     if (current_player.status == "inited") {
         current_player.status = "normal";
     }
+    if (game_data.current_chess == null) return;
+    
     for (let i = 0; i < game_data.current_chess.height; i++) {
         for (let j = 0; j < game_data.current_chess.width; j++) {
             let current_row = start_row + i;
