@@ -4,8 +4,8 @@
             <el-avatar icon="el-icon-user-solid"></el-avatar>
             <p id="score-board-username">{{ player_name }}</p>
         </el-card>
-        <el-table :data="player_infos" id="player-list" :row-class-name="tableRowClassName">
-            <el-table-column label="玩家昵称">
+        <el-table :data="player_infos" id="player-list" width="95%" :row-class-name="tableRowClassName">
+            <el-table-column label="玩家昵称" span=1>
                 <template slot-scope="scope">
                     <span>
                         <div v-if="scope.row.idx == 0" style="color: rgb(255,0,0)">▊ {{ scope.row.name }}</div>
@@ -15,12 +15,12 @@
                     </span>
                 </template>
             </el-table-column>
-            <el-table-column label="剩余方块">
+            <el-table-column label="剩余方块" width="120px">
                 <template slot-scope="scope">
                     <span>{{ scope.row.remains }} blocks</span>
                 </template>
             </el-table-column>
-            <el-table-column label="状态">
+            <el-table-column label="状态" width="100px">
                 <template slot-scope="scope">
                     <span>
                         <el-tag v-if="scope.row.status == 'inited'" >{{ scope.row.status }}</el-tag>
