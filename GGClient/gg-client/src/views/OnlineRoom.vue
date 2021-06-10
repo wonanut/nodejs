@@ -7,7 +7,7 @@
                     :player_infos="game_data.player_infos"
                     :player_name="player_nickname"
                 />
-                <el-button id="give-up" @click="handleGiveup()" icon="el-icon-close" type="danger" :disabled="game_data.current_status == 3">认输(Giveup)</el-button>
+                <el-button id="give-up" @click="handleGiveup()" icon="el-icon-close" type="danger" :disabled="game_data.canGiveup">认输(Giveup)</el-button>
                 <el-button id="give-up" @click="handleQuitOnlineGame()" icon="el-icon-upload2" type="success">离开游戏(Quit)</el-button>
             </div>
         </div>
@@ -56,6 +56,7 @@ export default {
                 current_blocks_prev_pos: [],
                 current_player: 0,
                 current_chess: null,
+                canGiveup: false
             }
         }
     },
@@ -92,9 +93,10 @@ export default {
                             ele.Notification.success("现在轮到" + this.game_data.current_player + "号玩家" + this.room_player_list[this.game_data.current_player] + "操作");
                         }
                         else {
-                            ele.Notification.success("现在轮到你操作");
+                            ele.Notification.success("现在轮到你操作，是时候表演真正的技术了！");
                         }
                         break;
+
                     case 'change_status':
                         this.game_data.player_infos[parseInt(new_value.player_idx)].status = new_value.new_status;
                         next_player_idx = parseInt(new_value.next_player_idx);
@@ -102,16 +104,17 @@ export default {
                             ele.Notification.info("游戏结束");
                             this.game_data.current_status = 3;
                         }
-                        else {
+                        else if(this.game_data.current_player != next_player_idx) {
                             this.game_data.current_player = next_player_idx;
                             if (next_player_idx != this.game_data.my_idx) {
                                 ele.Notification.success("现在轮到" + next_player_idx + "号玩家" + this.room_player_list[next_player_idx] + "操作");
                             }
                             else {
-                                ele.Notification.success("现在轮到你操作");
+                                ele.Notification.success("现在轮到你操作，是时候表演真正的技术了！");
                             }
                         }
                         break;
+
                     case 'game_operation':
                         next_player_idx = parseInt(new_value.next_player_idx);
                         var start_position = new_value.start_position;
@@ -119,28 +122,42 @@ export default {
                         this.game_data.current_chess = new_value.blocks;
                         this.game_data.current_blocks_chess_type = new_value.current_blocks_chess_type;
                         this.game_data.player_infos[new_value.player_idx].remains -= this.game_data.current_chess.blocks;
+
+                        // 如果有玩家完成所有棋子的放置，向服务端发送完成游戏的消息
+                        if (new_value.player_idx == this.game_data.my_idx && this.game_data.player_infos[new_value.player_idx].remains == 0) {
+                            this.game_data.canGiveup = true;
+                            this.ws.send(JSON.stringify({
+                                name: this.player_nickname,
+                                type: 'PLAYER_OPERATION_ONLINE_GAME',
+                                operation: 'FINISH',
+                                current_player_idx: this.game_data.current_player
+                            }));
+                        }
                         
+                        // 放置棋子
                         ggl.putChess(this.game_data, start_position[0], start_position[1]);
                         
+                        // 检测游戏是否结束，如果next_player_idx为-1则游戏结束
                         if (next_player_idx == -1) {
                             ele.Notification.info("游戏结束");
                             this.game_data.current_status = 3;
                         }
-                        else {
+                        else if (this.game_data.current_player != next_player_idx) {
                             this.game_data.current_player = next_player_idx;
                             if (next_player_idx != this.game_data.my_idx) {
                                 ele.Notification.success("现在轮到" + next_player_idx + "号玩家" + this.room_player_list[next_player_idx] + "操作");
                             }
                             else {
-                                ele.Notification.success("现在轮到你操作");
+                                ele.Notification.success("现在轮到你操作，是时候表演真正的技术了！");
                             }
                         }
 
+                        // 更新游戏界面显示
                         can.canvasDrawMap(this.canvas_config, this.game_data.map["map"]);
                         this.game_data.current_status = 0;
                         this.game_data.current_chess = null;
-
                         break;
+
                     default:
                         break;
                 }
@@ -230,6 +247,7 @@ export default {
                 operation: 'GIVEUP',
                 current_player_idx: this.game_data.current_player
             }));
+            this.game_data.canGiveup = true;
         },
         // 退出游戏处理函数
         handleQuitOnlineGame() {

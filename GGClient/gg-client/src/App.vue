@@ -131,6 +131,7 @@ export default {
                 case 'SERVER_MULTICAST_GIVEUP_ONLINE_GAME':
                 case 'SERVER_MULTICAST_UPDATE_ONLINE_GAME':
                 case 'SERVER_MULTICAST_QUIT_ONLINE_GAME':
+                case 'SERVER_MULTICAST_FINISH_ONLINE_GAME':
                     this.operation = data.operation;
                     break;
                 default:

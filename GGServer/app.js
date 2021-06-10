@@ -42,7 +42,7 @@ var server = ws.createServer(function(conn) {
     // 处理服务器端接收的消息
     conn.on('text', function(json) {
         var data = JSON.parse(json)
-        console.log('[' + server.connections.length + '] ' + data.name + ': ' + data.type);
+        console.log('[' + server.connections.length + '/' + Object.keys(online_rooms).length + '] ' + data.name + ': ' + data.type);
         switch (data.type) {
             // 用户登陆
             case 'PLAYER_LOGIN':
@@ -158,6 +158,7 @@ var server = ws.createServer(function(conn) {
                 // 组播该玩家在游戏房间中的游戏状态
                 var current_player_idx = Object.keys(online_rooms[conn.room_id]["conns"]).indexOf(conn.nickname);
                 online_rooms[conn.room_id]["config"][current_player_idx]["status"] = "quit";
+                var next_player_idx = __getNextPlayerIndex(online_rooms[conn.room_id]["config"], data.current_player_idx, current_player_idx);
                 
                 multicast(
                     online_rooms[conn.room_id]["conns"],
@@ -167,10 +168,15 @@ var server = ws.createServer(function(conn) {
                             type: "change_status",
                             player_idx: current_player_idx,
                             new_status: "quit",
-                            next_player_idx: __getNextPlayerIndex(online_rooms[conn.room_id]["config"], data.current_player_idx, current_player_idx)
+                            next_player_idx: next_player_idx
                         }
                 }));
                 
+                // 如果所有玩家均离开房间，清除该房间信息
+                if (next_player_idx == -1) {
+                    delete online_rooms[conn.room_id];
+                }
+
                 conn.room_id = null;
 
                 // 广播更新该玩家的游戏状态
@@ -221,6 +227,25 @@ var server = ws.createServer(function(conn) {
                                 }
                         }));
                         break;
+
+                    case 'FINISH':
+                        var current_player_idx = Object.keys(online_rooms[conn.room_id]["conns"]).indexOf(conn.nickname);
+                        if (online_rooms[conn.room_id]["config"][current_player_idx]["status"] != "finish") {
+                            online_rooms[conn.room_id]["config"][current_player_idx]["status"] = "finish";
+                            multicast(
+                                online_rooms[conn.room_id]["conns"],
+                                JSON.stringify({
+                                    type: 'SERVER_MULTICAST_FINISH_ONLINE_GAME',
+                                    operation: {
+                                        type: "change_status",
+                                        player_idx: current_player_idx,
+                                        new_status: "finish",
+                                        next_player_idx: data.current_player_idx
+                                    }
+                            }));
+                        }
+                        break;
+
                     default:
                         break;
                 }
