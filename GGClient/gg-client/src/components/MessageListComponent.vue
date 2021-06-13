@@ -3,7 +3,8 @@
         <!--eslint-disable-next-line-->
         <div v-for="item in message_list">
             <div v-if="item.message_type == 'normal'" class="message-item-normal">
-                <p class="message-author">{{ item.nickname }}</p>
+                <p v-if="item.nickname == nickname" class="message-author">我</p>
+                <p v-else class="message-author">{{ item.nickname }}</p>
                 <p class="message-content">{{ item.message }}</p>
             </div>
             <div v-if="item.message_type == 'system'" class="message-item-system">
@@ -19,6 +20,10 @@ export default {
     props: {
         message_list: {
             type: Array,
+            default: null
+        },
+        nickname: {
+            type: String,
             default: null
         }
     }

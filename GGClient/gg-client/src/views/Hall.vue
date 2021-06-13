@@ -26,6 +26,7 @@
             <MessageListComponent
                 v-show="messageListVisible"
                 :message_list="message_list"
+                :nickname="player_nickname"
             />
             
             <el-input v-model="editMessage" class="edit-message">
