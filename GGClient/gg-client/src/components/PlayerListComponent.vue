@@ -27,7 +27,7 @@ export default {
 
 <style scoped>
 #player-list {
-    width: 95%;
-    margin: 10px;
+    width: 100%;
+    margin: 0px;
 }
 </style>

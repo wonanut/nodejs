@@ -65,6 +65,19 @@ var server = ws.createServer(function(conn) {
 
                 break;
             
+            // 大厅聊天
+            case 'PLAYER_SEND_MESSAGE':
+                broadcast(JSON.stringify({
+                    type: 'SERVER_BROADCAST_MESSAGE',
+                    data: {
+                        nickname: data.name,
+                        message: data.message,
+                        date: __getDate(2),
+                        message_type: "normal"
+                    }
+                }));
+                break;
+            
             // 进入匹配队列
             case 'PLAYER_PREPARE':
                 conn.status = PlayerStatus.PREPARE;
@@ -421,3 +434,23 @@ function __getPlayerStatus(player_infos, player_idx) {
     }
     return player_infos[player_idx]["status"];
 }
+
+// 内部函数，用于获取当前时间
+// format: 规定返回时间格式 1-返回年月日 2-返回年月日时分秒
+function __getDate(format) {
+    var now = new Date();
+    var year = now.getFullYear();
+    var month = now.getMonth()+1;
+    var date = now.getDate();
+    var hour = now.getHours();
+    var minu = now.getMinutes();
+    var sec = now.getSeconds();
+    if (format == 1){
+        _time = year+"-"+month+"-"+date
+    }
+    else if (format == 2){
+        _time = year+"-"+month+"-"+date+" "+hour+":"+minu+":"+sec
+    }
+
+    return _time
+}    

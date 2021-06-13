@@ -1,9 +1,9 @@
 <template>
 <div id="hall-view">
     <div id="hall-view-left">
-        <div id="hall-view-left-body">
+        <div v-show="!messageListVisible" class="hall-view-left-wrapper">
             <div id="hall-view-left-top">
-                <el-input v-model="player_nickname" class="input-with-select" :disabled=nickname_editable>
+                <el-input v-model="player_nickname" class="edit-nickname" :disabled=nickname_editable>
                     <el-button slot="append" v-if="nickname_editable" @click="handleEdit()" icon="el-icon-edit"></el-button>
                     <el-button slot="append" v-else @click="handleSubmitEdit()" icon="el-icon-check"></el-button>
                 </el-input>
@@ -11,6 +11,26 @@
             <PlayerListComponent 
                 :player_list="player_list"
             />
+            <div class="message-box">
+                <el-badge :value="message_list.length" class="item">
+                    <el-button size="small" icon="el-icon-chat-line-square" @click="handleMessageList()">新消息</el-button>
+                </el-badge>
+                <el-link class="message-box-info" type="primary" @click="handleMessageList()">{{ new_message.nickname }}:{{ new_message.message.substr(0,10) }}...</el-link>
+            </div>
+        </div>
+        
+        <div v-show="messageListVisible" class="hall-view-left-wrapper">
+            <el-page-header id="back-title" @back="handleGoBack()" content="大厅消息"></el-page-header>
+            <el-divider></el-divider>
+
+            <MessageListComponent
+                v-show="messageListVisible"
+                :message_list="message_list"
+            />
+            
+            <el-input v-model="editMessage" class="edit-message">
+                <el-button slot="append" @click="handleSend()" icon="el-icon-s-promotion"></el-button>
+            </el-input>
         </div>
     </div>
     <div id="hall-view-right" ref="canvasWrapper">
@@ -27,15 +47,20 @@
 
 <script>
 import PlayerListComponent from '@/components/PlayerListComponent.vue'
+import MessageListComponent from '@/components/MessageListComponent.vue'
 
 export default {
     name: "hall",
     components: {
-        PlayerListComponent
+        PlayerListComponent,
+        MessageListComponent
     },
     data() {
         return {
             nickname_editable: true,
+            messageListVisible: 0,
+            editMessage: "",
+            message_list: []
         }
     },
     props: {
@@ -50,6 +75,20 @@ export default {
         player_list: {
             type: Array,
             default: null
+        },
+        new_message: {
+            type: Object,
+            default: null
+        }
+    },
+    watch: {
+        new_message: {
+            handler(new_value, old_value) {
+                console.log(new_value);
+                if (new_value.message_type == "init") return;
+                this.message_list.unshift(new_value);
+            },
+            immediate: true
         }
     },
     methods: {
@@ -64,6 +103,22 @@ export default {
         },
         handleStartOfflineGame() {
             this.$emit('updateGameView', 2)
+        },
+        handleMessageList() {
+            this.messageListVisible ^= 1;
+        },
+        handleGoBack() {
+            this.messageListVisible ^= 1;
+        },
+        handleSend() {
+            if (this.editMessage != "") {
+                this.ws.send(JSON.stringify({
+                    type: "PLAYER_SEND_MESSAGE",
+                    name: this.player_nickname,
+                    message: this.editMessage
+                }));
+                this.editMessage = "";
+            }
         }
     }
 }
@@ -89,12 +144,44 @@ export default {
     width: 20%;
     height: 80%;
     margin: 5%;
-    margin-left: 10%;
-    margin-right: 0;
+    position: relative;
     border: solid 1px rgb(229, 233, 242);
     border-radius: 10px;
-    flex: 2;
     font-size: 22px;
+    flex: 2;
+}
+
+.hall-view-left-wrapper {
+    width: 95%;
+    padding-left: 2.5%;
+    padding-top: 20px;
+}
+
+.message-box {
+    position: absolute;
+    width: 95%;
+    left: 2.5%;
+    bottom: 12px;
+    text-align: left;
+    background: white;
+    z-index: 99;
+}
+
+.message-box-info {
+    margin-left: 10px;
+}
+
+#back-title {
+    padding-left: 10px;
+    font-size: 14px;
+}
+
+.edit-message {
+    position: absolute;
+    width: 98%;
+    bottom: 5px;
+    left: 1%;
+    z-index: 99;
 }
 
 #hall-view-right {
@@ -112,9 +199,8 @@ export default {
     padding-right: 8px;
 }
 
-.input-with-select {
-    margin: 10px;
-    width: 95%;
+.edit-nickname {
+    width: 100%;
 }
 
 #hall-tip {

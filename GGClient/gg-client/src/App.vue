@@ -6,11 +6,12 @@
         @handleLogin="handleLogin" 
         @updateGameView="handleUpdateGameView"
     />
-    <HallView 
+    <HallView
         v-if="game_status == 1 && game_view == 1" 
         :player_nickname="player_nickname" 
         :ws="ws"
         :player_list="player_list"
+        :new_message="new_message"
         @updateGameView="handleUpdateGameView"
     />
     <OfflineGameView 
@@ -71,7 +72,12 @@ export default {
             // 下面的参数是和在线游戏的房间有关的数据
             room_player_list: [],
             room_id: null,
-            operation: null
+            operation: null,
+            // 下面的参数是和广播消息有关的数据
+            new_message: {
+                message_type: "init",
+                "message": "暂时没有新消息"
+            }
         }
     },
     destroyed() {
@@ -106,6 +112,11 @@ export default {
                 case 'SERVER_BROADCAST_ALL':
                     this.player_list = data.player_list;
                     ele.Notification.success(data.message);
+                    this.new_message = {
+                        nickname: "System",
+                        message: data.message,
+                        message_type: "system"
+                    }
                     break;
                 case 'SERVER_BROADCAST_NEW_PREPARE':
                 case 'SERVER_BROADCAST_CANCEL_PREPARE':
@@ -133,6 +144,9 @@ export default {
                 case 'SERVER_MULTICAST_QUIT_ONLINE_GAME':
                 case 'SERVER_MULTICAST_FINISH_ONLINE_GAME':
                     this.operation = data.operation;
+                    break;
+                case 'SERVER_BROADCAST_MESSAGE':
+                    this.new_message = data.data;
                     break;
                 default:
                     break;
