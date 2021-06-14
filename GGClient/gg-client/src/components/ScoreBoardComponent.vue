@@ -18,6 +18,7 @@
             <el-table-column label="剩余方块" width="120px">
                 <template slot-scope="scope">
                     <span>{{ scope.row.remains }} blocks</span>
+                    <el-progress :stroke-width="3" :percentage="100 * (89 - scope.row.remains) / 89" :format="format"></el-progress>
                 </template>
             </el-table-column>
             <el-table-column label="状态" width="100px">
@@ -57,6 +58,9 @@ export default {
             } else {
                 return '';
             }
+        },
+        format(percentage) {
+            return '';
         }
     }
 }

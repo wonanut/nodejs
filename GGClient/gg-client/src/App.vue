@@ -113,7 +113,7 @@ export default {
                     this.player_list = data.player_list;
                     // ele.Notification.success(data.message);
                     this.new_message = {
-                        nickname: "System",
+                        nickname: "系统通知",
                         message: data.message,
                         message_type: "system"
                     }

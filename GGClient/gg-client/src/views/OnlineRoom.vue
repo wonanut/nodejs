@@ -366,8 +366,6 @@ export default {
     width: 20%;
     height: 80%;
     margin: 5%;
-    margin-left: 10%;
-    margin-right: 0;
     border: solid 1px rgb(229, 233, 242);
     border-radius: 10px;
     flex: 2;
