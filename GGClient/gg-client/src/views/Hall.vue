@@ -166,6 +166,7 @@ export default {
 
 .hall-view-left-wrapper {
     width: 95%;
+    height: 100%;
     padding-left: 2.5%;
     padding-top: 20px;
 }

@@ -1,5 +1,5 @@
 <template>
-    <div id="message-liat">
+    <div id="message-list">
         <!--eslint-disable-next-line-->
         <div v-for="item in message_list">
             <div v-if="item.message_type == 'normal'" class="message-item-normal">
@@ -33,7 +33,9 @@ export default {
 <style scoped>
 #message-list {
     width: 100%;
+    height: 80%;
     text-align: left;
+    overflow: auto;
 }
 
 .message-item-normal {
