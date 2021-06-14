@@ -53,7 +53,7 @@ export default {
 
 .message-content {
     color: black;
-    margin-top: 8px;
+    margin-top: 5px;
     font-size: 15px;
 }
 

@@ -111,7 +111,7 @@ export default {
                     break;
                 case 'SERVER_BROADCAST_ALL':
                     this.player_list = data.player_list;
-                    ele.Notification.success(data.message);
+                    // ele.Notification.success(data.message);
                     this.new_message = {
                         nickname: "System",
                         message: data.message,

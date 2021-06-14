@@ -12,7 +12,7 @@
                 :player_list="player_list"
             />
             <div class="message-box">
-                <el-badge :value="message_list.length" class="item">
+                <el-badge :value="message_new_list.length" class="item">
                     <el-button size="small" icon="el-icon-chat-line-square" @click="handleMessageList()">新消息</el-button>
                 </el-badge>
                 <el-link class="message-box-info" type="primary" @click="handleMessageList()">{{ new_message.nickname }}:{{ new_message.message.substr(0,10) }}...</el-link>
@@ -20,7 +20,7 @@
         </div>
         
         <div v-show="messageListVisible" class="hall-view-left-wrapper">
-            <el-page-header id="back-title" @back="handleGoBack()" content="大厅消息"></el-page-header>
+            <el-page-header id="back-title" @back="handleGoBack()" content="广播消息"></el-page-header>
             <el-divider></el-divider>
 
             <MessageListComponent
@@ -43,25 +43,31 @@
             <el-button type="success" round size="normal" @click="handleStartOnlineGame">匹配4人游戏</el-button>
         </div>
     </div>
+    <PersonalBarComponent 
+        :nickname="player_nickname"
+    />
 </div>
 </template>
 
 <script>
 import PlayerListComponent from '@/components/PlayerListComponent.vue'
 import MessageListComponent from '@/components/MessageListComponent.vue'
+import PersonalBarComponent from '@/components/PersonalBarComponent.vue'
 
 export default {
     name: "hall",
     components: {
         PlayerListComponent,
-        MessageListComponent
+        MessageListComponent,
+        PersonalBarComponent
     },
     data() {
         return {
             nickname_editable: true,
             messageListVisible: 0,
             editMessage: "",
-            message_list: []
+            message_list: [],
+            message_new_list: []
         }
     },
     props: {
@@ -85,9 +91,13 @@ export default {
     watch: {
         new_message: {
             handler(new_value, old_value) {
-                console.log(new_value);
                 if (new_value.message_type == "init") return;
-                this.message_list.unshift(new_value);
+                if (this.messageListVisible) {
+                    this.message_list.unshift(new_value);
+                }
+                else {
+                    this.message_new_list.unshift(new_value);
+                }
             },
             immediate: true
         }
@@ -106,6 +116,8 @@ export default {
             this.$emit('updateGameView', 2)
         },
         handleMessageList() {
+            this.message_list.push.apply(this.message_list, this.message_new_list);
+            this.message_new_list = [];
             this.messageListVisible ^= 1;
         },
         handleGoBack() {
