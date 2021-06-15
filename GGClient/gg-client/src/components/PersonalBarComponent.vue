@@ -3,8 +3,8 @@
         <el-avatar icon="el-icon-user-solid"></el-avatar>
         <div id="player-bar-content">
             <p id="player-bar-nickname">{{ nickname }}</p>
-            <p v-if="connection_status" class="player-bar-p" id="player-bar-connection-status-success">服务器连接正常</p>
-            <p v-else class="player-bar-p" id="player-bar-connection-status-failed">服务器连接断开</p>
+            <p v-if="connection_status" class="player-bar-p" id="player-bar-connection-status-success">连接状态 ●●●●●</p>
+            <p v-else class="player-bar-p" id="player-bar-connection-status-failed">连接状态 ○○○○○</p>
         </div>
     </div>
 </template>
