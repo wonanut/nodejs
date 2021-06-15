@@ -45,6 +45,7 @@
     </div>
     <PersonalBarComponent 
         :nickname="player_nickname"
+        :connection_status="connection_status"
     />
 </div>
 </template>
@@ -86,6 +87,10 @@ export default {
         new_message: {
             type: Object,
             default: null
+        },
+        connection_status: {
+            type: Boolean,
+            default: false
         }
     },
     watch: {

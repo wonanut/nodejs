@@ -2,8 +2,9 @@
     <div id="player-bar">
         <el-avatar icon="el-icon-user-solid"></el-avatar>
         <div id="player-bar-content">
-            <p id="player-bar-p">昵称</p>
             <p id="player-bar-nickname">{{ nickname }}</p>
+            <p v-if="connection_status" class="player-bar-p" id="player-bar-connection-status-success">服务器连接正常</p>
+            <p v-else class="player-bar-p" id="player-bar-connection-status-failed">服务器连接断开</p>
         </div>
     </div>
 </template>
@@ -15,6 +16,10 @@ export default {
         nickname: {
             type: String,
             default: "PLAYER_unknown"
+        },
+        connection_status: {
+            type: Boolean,
+            default: false
         }
     }
 }
@@ -41,15 +46,22 @@ export default {
     text-align: left;
 }
 
-#player-bar-p {
-    color: #aaa;
+.player-bar-p {
     font-size: 12px;
-    margin-bottom: 0;
+    margin-top: 0;
+}
+
+#player-bar-connection-status-success {
+    color: green;
+}
+
+#player-bar-connection-status-failed {
+    color: red;
 }
 
 #player-bar-nickname {
     font-weight: bold;
-    margin-top: 5px;
+    margin-bottom: 5px;
     font-size: 14px;
 }
 </style>

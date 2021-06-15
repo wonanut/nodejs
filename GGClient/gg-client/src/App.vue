@@ -12,6 +12,7 @@
         :ws="ws"
         :player_list="player_list"
         :new_message="new_message"
+        :connection_status="connection_status"
         @updateGameView="handleUpdateGameView"
     />
     <OfflineGameView 
@@ -77,7 +78,9 @@ export default {
             new_message: {
                 message_type: "init",
                 "message": "暂时没有新消息"
-            }
+            },
+            // 心跳检测状态
+            connection_status: true
         }
     },
     destroyed() {
@@ -107,6 +110,15 @@ export default {
                         // 如果接收到服务器端的登陆成功消息，更新game_status和game_view
                         this.game_status = 1;
                         this.game_view = 1;
+                        // 开启心跳检测，每隔1秒向服务器发起一次心跳检测
+                        var _this = this;
+                        setInterval(function() {
+                            _this.connection_status = false;
+                            _this.ws.send(JSON.stringify({
+                                name: _this.player_nickname,
+                                type: 'CONNECTION_STATUS_CHECK'
+                            }));
+                        }, 1000);
                     }
                     break;
                 case 'SERVER_BROADCAST_ALL':
@@ -147,6 +159,9 @@ export default {
                     break;
                 case 'SERVER_BROADCAST_MESSAGE':
                     this.new_message = data.data;
+                    break;
+                case 'CONNECTION_CHECK_RESPONSE':
+                    this.connection_status = true;
                     break;
                 default:
                     break;

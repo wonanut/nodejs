@@ -44,6 +44,14 @@ var server = ws.createServer(function(conn) {
         var data = JSON.parse(json)
         console.log('[' + server.connections.length + '/' + Object.keys(online_rooms).length + '] ' + data.name + ': ' + data.type);
         switch (data.type) {
+            // 客户端连接心跳检测
+            case 'CONNECTION_STATUS_CHECK':
+                singleConnect(conn, JSON.stringify({
+                    type: 'CONNECTION_CHECK_RESPONSE',
+                    message: 'success'
+                }));
+                break;
+
             // 用户登陆
             case 'PLAYER_LOGIN':
                 conn.nickname = data.name;
@@ -54,7 +62,7 @@ var server = ws.createServer(function(conn) {
                 singleConnect(conn, JSON.stringify({
                     type: 'SERVER_LOGINSTATUS',
                     message: 'success'
-                }))
+                }));
                 
                 // 在大厅广播消息
                 broadcast(JSON.stringify({
